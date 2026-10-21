@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Circuito do Conectivo</title>
+  <!-- Fontes (se estiver sem internet, o jogo usa fontes do sistema) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ============ TELA 1: MENU ============ -->
+  <section id="tela-menu" class="tela ativa">
+    <header class="menu-topo">
+      <div class="logo" aria-hidden="true"><span class="logo-raio"></span></div>
+      <div>
+        <h1>Circuito do Conectivo</h1>
+        <p class="sub">A usina está apagada há anos. Você é o técnico enviado para religá-la, sala por sala.
+          Cada porta é controlada por um circuito lógico e só abre quando a fórmula dele for <b class="txt-v">VERDADEIRA</b>.</p>
+      </div>
+    </header>
+    <div id="lista-fases"></div>
+    <footer class="menu-rodape">
+      <button id="btn-como-jogar" class="btn">Como jogar</button>
+      <button id="btn-reset" class="btn btn-fantasma">Apagar progresso</button>
+      <span id="total-estrelas" class="total-estrelas"></span>
+    </footer>
+  </section>
+
+  <!-- ============ TELA 2: JOGO ============ -->
+  <section id="tela-jogo" class="tela">
+    <header class="hud">
+      <div class="hud-info">
+        <span id="hud-etapa" class="hud-etapa"></span>
+        <h2 id="hud-titulo"></h2>
+      </div>
+      <div class="hud-status">
+        <div id="hud-jogadas" class="hud-jogadas"></div>
+        <div id="hud-estrelas" class="hud-estrelas" title="Estrelas que você ganha se terminar agora"></div>
+      </div>
+      <div class="hud-botoes">
+        <button id="btn-ajuda" class="btn btn-icone" title="Como jogar esta etapa">?</button>
+        <button id="btn-tabela" class="btn">Tabela-verdade <small>−1★</small></button>
+        <button id="btn-reiniciar" class="btn">Reiniciar</button>
+        <button id="btn-menu" class="btn">Menu</button>
+      </div>
+    </header>
+
+    <p id="dica" class="dica"></p>
+    <p id="formula-texto" class="formula-texto"></p>
+
+    <main class="sala">
+      <aside id="painel-interruptores" class="painel painel-interruptores"></aside>
+      <div id="area-circuitos" class="area-circuitos"></div>
+      <div class="porta-area">
+        <div id="porta" class="porta" aria-hidden="true">
+          <div class="folha esq"></div>
+          <div class="folha dir"></div>
+        </div>
+        <span id="porta-status" class="porta-status">Trancada</span>
+      </div>
+    </main>
+
+    <div id="extra" class="extra"></div>
+    <footer id="bandeja" class="bandeja"></footer>
+  </section>
+
+  <!-- ============ TELA 3: FINAL ============ -->
+  <section id="tela-final" class="tela">
+    <div class="final">
+      <div class="final-lampadas" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <h1>Usina religada!</h1>
+      <p>Todas as salas estão energizadas. Você provou, circuito por circuito, que entende negação,
+        conjunção, disjunção, condicional e bicondicional.</p>
+      <p id="final-estrelas" class="final-estrelas"></p>
+      <button id="btn-final-menu" class="btn btn-primario">Voltar ao menu</button>
+    </div>
+  </section>
+
+  <!-- ============ JANELA (modal) reaproveitada pelo jogo ============ -->
+  <div id="modal" class="modal oculto" role="dialog" aria-modal="true">
+    <div id="modal-caixa" class="modal-caixa"></div>
+  </div>
+
+  <!-- Ordem importa: lógica → fases → jogo -->
+  <script src="logic.js"></script>
+  <script src="levels.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
