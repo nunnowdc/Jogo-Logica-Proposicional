@@ -1,0 +1,55 @@
+/* =====================================================================
+   tema.css — cores e fontes do "Circuito do Conectivo"
+   ---------------------------------------------------------------------
+   PARA MUDAR O VISUAL, comece por aqui: todos os outros arquivos CSS
+   usam só estas variáveis. As versões "-rgb" são os mesmos tons em
+   formato R,G,B, usadas para brilhos e transparências:
+   rgba(var(--ambar-rgb), .35)
+   ===================================================================== */
+
+:root {
+  /* ---------- Fundos e superfícies ---------- */
+  --bg: #0e1115;
+  --painel: #161a20;
+  --painel2: #1d232b;
+  --grade-fundo: rgba(255,255,255,.025);   /* grade "planta elétrica" do body */
+  --gate-fundo: rgba(255,255,255,.015);
+  --modal-fundo: rgba(4,6,8,.72);
+
+  /* ---------- Bordas ---------- */
+  --borda: #2b333d;
+  --borda-forte: #3d4753;
+
+  /* ---------- Texto ---------- */
+  --texto: #e7eaee;
+  --texto2: #98a3b0;
+
+  /* ---------- Cores de estado ---------- */
+  --verde: #3ddc84;          /* fio energizado (V) */
+  --verde-rgb: 61,220,132;
+  --verde-esc: #17482f;
+  --vermelho: #ef6a55;       /* fio sem energia (F) */
+  --vermelho-esc: #4c2620;
+  --ambar: #ffc24b;          /* lâmpada / destaque */
+  --ambar-rgb: 255,194,75;
+  --ambar-claro: #ffd27a;    /* hover do botão principal */
+  --texto-sobre-ambar: #241a04;
+  --azul: #6cb4ff;           /* peças encaixadas */
+  --azul-rgb: 108,180,255;
+
+  /* ---------- Peças do cenário ---------- */
+  --alavanca-fundo: #2f3640;
+  --alavanca-pino: #c9d1da;
+  --slot-vazio: #56616e;
+  --lampada-apagada: #22282f;
+  --lampada-rosca: #4a535e;
+  --lampada-brilho: #fff7dc;
+  --porta-fundo: #07090b;
+  --porta-listra1: #3a3f47;
+  --porta-listra2: #2c3037;
+  --porta-junta: #1c1f24;
+
+  /* ---------- Fontes ---------- */
+  --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  --display: 'Chakra Petch', 'Segoe UI', system-ui, sans-serif;
+}

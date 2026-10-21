@@ -53,14 +53,21 @@ Menos jogadas ou menos peças rendem mais estrelas (até ★★★ por fase). Co
 ## Estrutura
 
 ```
-index.html   telas do jogo (menu, fase, final)
-style.css    visual
-logic.js     avaliação das fórmulas (conectivos, valorações, tabela-verdade)
-levels.js    definição das fases
-game.js      interação, drag-and-drop, estrelas e progresso salvo
+index.html        telas do jogo (menu, fase, final)
+css/
+  tema.css        cores e fontes (todas as variáveis do visual)
+  base.css        estrutura geral, botões, tabelas e janelas
+  menu.css        tela de menu e tela final
+  jogo.css        HUD, interruptores, circuito, porta e bandeja
+js/
+  logic.js        avaliação das fórmulas (conectivos, valorações, tabela-verdade)
+  levels.js       definição das fases
+  game.js         interação, drag-and-drop, estrelas e progresso salvo
+img/              imagens e prints
 ```
 
-Para criar uma fase nova, copie um objeto em `levels.js` e altere os campos (o arquivo explica cada um).
+- **Mudar o visual:** comece pelo `css/tema.css`. Os outros arquivos CSS usam só as variáveis definidas nele.
+- **Criar uma fase nova:** copie um objeto em `js/levels.js` e altere os campos (o arquivo explica cada um).
 
 ## Equipe
 

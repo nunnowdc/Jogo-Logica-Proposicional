@@ -1,0 +1,78 @@
+/* =====================================================================
+   base.css — estrutura geral, botões, tabelas e janela (modal)
+   ===================================================================== */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--texto);
+  font-family: var(--display);
+  background-color: var(--bg);
+  /* grade discreta de "planta elétrica" */
+  background-image:
+    linear-gradient(var(--grade-fundo) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grade-fundo) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+button { font-family: inherit; }
+.txt-v { color: var(--verde); }
+.txt-f { color: var(--vermelho); }
+
+/* ---------- Telas ---------- */
+.tela { display: none; max-width: 1120px; margin: 0 auto; padding: 24px 16px 40px; }
+.tela.ativa { display: block; animation: surgir .25s ease-out; }
+@keyframes surgir { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ---------- Botões ---------- */
+.btn {
+  background: var(--painel2);
+  color: var(--texto);
+  border: 1px solid var(--borda-forte);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.btn:hover { border-color: var(--ambar); }
+.btn small { color: var(--ambar); margin-left: 4px; }
+.btn-primario { background: var(--ambar); color: var(--texto-sobre-ambar); border-color: var(--ambar); font-weight: 700; }
+.btn-primario:hover { background: var(--ambar-claro); }
+.btn-fantasma { background: transparent; color: var(--texto2); }
+.btn-icone { width: 38px; padding: 8px 0; font-weight: 700; }
+
+/* ---------- Tabelas ---------- */
+.tabela { border-collapse: collapse; font-family: var(--mono); font-size: 14px; width: 100%; }
+.tabela th, .tabela td { padding: 6px 10px; text-align: center; border-bottom: 1px solid var(--borda); white-space: nowrap; }
+.tabela th { color: var(--texto2); font-weight: 400; }
+.tabela .V { color: var(--verde); }
+.tabela .F { color: var(--vermelho); }
+.tabela tr.atual td { background: rgba(var(--ambar-rgb), .12); }
+.tabela td.ok { color: var(--verde); }
+.tabela td.erro { color: var(--vermelho); }
+
+/* ---------- Modal ---------- */
+.modal {
+  position: fixed; inset: 0; z-index: 10; padding: 16px;
+  background: var(--modal-fundo); display: flex; align-items: center; justify-content: center;
+}
+.modal.oculto { display: none; }
+.modal-caixa {
+  width: min(560px, 100%); max-height: 90vh; overflow-y: auto;
+  background: var(--painel); border: 1px solid var(--borda-forte); border-radius: 14px; padding: 22px;
+  animation: surgir .2s ease-out;
+}
+.modal-caixa h3 { margin: 0 0 10px; font-size: 24px; }
+.modal-caixa p { color: var(--texto2); line-height: 1.5; }
+.modal-caixa ul { padding-left: 20px; color: var(--texto2); line-height: 1.6; }
+.modal-botoes { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 18px; }
+.estrelas-grandes { font-size: 40px; color: var(--ambar); letter-spacing: 6px; text-align: center; margin: 6px 0; }
+.estrelas-grandes .apagada { color: var(--borda-forte); }
+.modal-caixa.vitoria { border-color: var(--verde); }
+.modal-caixa.derrota { border-color: var(--vermelho); }
+.ref-conectivos { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 6px; }
+.ref-conectivos td { padding: 6px 8px; border-bottom: 1px solid var(--borda); color: var(--texto2); }
+.ref-conectivos td:first-child { font-family: var(--mono); font-size: 20px; color: var(--ambar); width: 36px; text-align: center; }
