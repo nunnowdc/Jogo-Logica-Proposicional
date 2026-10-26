@@ -81,3 +81,11 @@ img/              imagens e prints
 ## 📄 Licença
 
 Distribuído sob a licença MIT. Veja o arquivo [LICENSE](LICENSE).
+
+# Adições a serem implementadas
+
+- Remover elemtnos do frontend (caixas de valor logico)
+- Add uma terceira etapa de equivalencia logica
+- adicionar tempo em todas as fases (se terminar, perdeu)
+- ranking da sala
+- multiplayer
