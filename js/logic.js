@@ -373,10 +373,46 @@ function verificarEtapa2(fase) {
   };
 }
 
+function verificarEtapa3(fase) {
+  const problemas = [];
+  const vars = variaveisDe(fase.formula);
+  const linhas = gerarTabelaVerdade(fase.formula, fase.variaveis);
+
+  if (new Set(fase.variaveis).size !== fase.variaveis.length) problemas.push('há variáveis repetidas');
+  if (vars.some(v => !fase.variaveis.includes(v))) problemas.push('a fórmula usa variável ausente da lista');
+  if (fase.compararCom) {
+    const varsComparacao = variaveisDe(fase.compararCom);
+    if (varsComparacao.some(v => !fase.variaveis.includes(v))) {
+      problemas.push('a fórmula de comparação usa variável ausente da lista');
+    }
+    const equivalencias = linhas.map(l => avaliar(fase.formula, l.valoracao) === avaliar(fase.compararCom, l.valoracao));
+    if (!equivalencias.includes(true) || !equivalencias.includes(false)) {
+      problemas.push('a comparação deve conter linhas iguais e diferentes');
+    }
+  }
+  if (fase.criterioEstrelas.tres !== linhas.length) {
+    problemas.push(`criterioEstrelas.tres deveria ser ${linhas.length}`);
+  }
+  if (fase.criterioEstrelas.dois < fase.criterioEstrelas.tres) {
+    problemas.push('criterioEstrelas.dois não pode ser menor que criterioEstrelas.tres');
+  }
+
+  return {
+    fase: fase.id, ok: problemas.length === 0,
+    minimo: linhas.length, limite: 'linhas da tabela', solucoes: linhas.length,
+    exemplo: `${linhas.filter(l => l.resultado).length} saídas V`,
+    problema: problemas.join('; ') || '-',
+  };
+}
+
 /* Roda a verificação de todas as fases e mostra o relatório no console. */
 function verificarFases(fases) {
   const relatorio = fases.map(f => {
-    try { return f.etapa === 1 ? verificarEtapa1(f) : verificarEtapa2(f); }
+    try {
+      if (f.etapa === 1) return verificarEtapa1(f);
+      if (f.etapa === 2) return verificarEtapa2(f);
+      return verificarEtapa3(f);
+    }
     catch (e) { return { fase: f.id, ok: false, minimo: '-', limite: '-', solucoes: 0, exemplo: '-', problema: e.message }; }
   });
   if (typeof console !== 'undefined') {

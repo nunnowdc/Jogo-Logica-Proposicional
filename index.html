@@ -26,6 +26,18 @@
       </div>
     </header>
     <div id="lista-fases"></div>
+    <section class="ranking-sala" aria-labelledby="ranking-titulo">
+      <div>
+        <h2 id="ranking-titulo">Ranking da sala</h2>
+        <p>Ranking local neste navegador, ordenado pelas estrelas acumuladas.</p>
+      </div>
+      <form id="form-jogador" class="form-jogador">
+        <label for="nome-jogador">Nome do jogador</label>
+        <input id="nome-jogador" maxlength="24" autocomplete="nickname" placeholder="Seu nome" required>
+        <button class="btn" type="submit">Salvar nome</button>
+      </form>
+      <ol id="lista-ranking" class="lista-ranking"></ol>
+    </section>
     <footer class="menu-rodape">
       <button id="btn-como-jogar" class="btn">Como jogar</button>
       <button id="btn-reset" class="btn btn-fantasma">Apagar progresso</button>
@@ -42,6 +54,7 @@
       </div>
       <div class="hud-status">
         <div id="hud-jogadas" class="hud-jogadas"></div>
+        <div id="hud-tempo" class="hud-tempo" aria-label="Tempo restante"></div>
         <div id="hud-estrelas" class="hud-estrelas" title="Estrelas que você ganha se terminar agora"></div>
       </div>
       <div class="hud-botoes">
@@ -78,8 +91,8 @@
         <span></span><span></span><span></span><span></span><span></span>
       </div>
       <h1>Usina religada!</h1>
-      <p>Todas as salas estão energizadas. Você provou, circuito por circuito, que entende negação,
-        conjunção, disjunção, condicional e bicondicional.</p>
+      <p>Todas as salas estão energizadas. Você provou que entende os conectivos lógicos,
+        monta circuitos, resolve tabelas-verdade e identifica equivalências lógicas.</p>
       <p id="final-estrelas" class="final-estrelas"></p>
       <button id="btn-final-menu" class="btn btn-primario">Voltar ao menu</button>
     </div>

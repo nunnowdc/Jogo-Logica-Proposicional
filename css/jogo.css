@@ -13,6 +13,8 @@
 .hud-status { display: flex; gap: 18px; align-items: center; font-family: var(--mono); }
 .hud-jogadas { font-size: 15px; }
 .hud-jogadas.alerta { color: var(--vermelho); }
+.hud-tempo { font-size: 15px; font-variant-numeric: tabular-nums; }
+.hud-tempo.alerta { color: var(--vermelho); }
 .hud-estrelas { color: var(--ambar); font-size: 20px; letter-spacing: 3px; }
 .hud-botoes { display: flex; gap: 8px; flex-wrap: wrap; }
 
@@ -43,9 +45,6 @@
 .pino { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--alavanca-pino); transition: left .15s, background .15s; }
 .interruptor.ligado .alavanca { background: var(--verde-esc); }
 .interruptor.ligado .pino { left: 23px; background: var(--verde); }
-.bitv { margin-left: auto; font-weight: 700; }
-.interruptor.ligado .bitv { color: var(--verde); }
-.interruptor:not(.ligado) .bitv { color: var(--vermelho); }
 .travado-tag { font-size: 12px; color: var(--texto2); font-family: var(--display); }
 
 /* ---------- Circuito ---------- */
@@ -54,9 +53,6 @@
   background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; padding: 14px;
 }
 .linha-rotulo { font-size: 13px; color: var(--texto2); margin-bottom: 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.chip-val { font-family: var(--mono); padding: 2px 8px; border-radius: 6px; border: 1px solid var(--borda-forte); }
-.chip-val.v1 { color: var(--verde); border-color: var(--verde-esc); }
-.chip-val.v0 { color: var(--vermelho); border-color: var(--vermelho-esc); }
 .linha-corpo { display: flex; align-items: center; overflow-x: auto; padding: 12px 4px 6px; }
 
 /* Nós do circuito: variáveis, portas lógicas e encaixes */
@@ -65,22 +61,13 @@
   padding: 8px 10px; border-radius: 8px; border: 2px solid var(--borda-forte);
   background: var(--painel2); font-size: 18px; font-weight: 700;
 }
-.no-var .bit { font-size: 11px; font-weight: 400; color: var(--texto2); }
 .gate {
   padding: 14px 10px 10px; border-radius: 10px; border: 2px solid var(--borda-forte);
   background: var(--gate-fundo); transition: border-color .2s, box-shadow .2s;
 }
 .no.v1 { border-color: var(--verde); box-shadow: 0 0 10px rgba(var(--verde-rgb), .28); }
 .no.v0 { border-color: var(--vermelho-esc); }
-.no-var.v1 .bit { color: var(--verde); }
-.no-var.v0 .bit { color: var(--vermelho); }
 .op { font-size: 24px; color: var(--ambar); padding: 0 2px; line-height: 1; }
-.saida {
-  position: absolute; top: -10px; right: 8px; font-size: 11px; line-height: 1;
-  padding: 3px 6px; border-radius: 6px; background: var(--bg); border: 1px solid currentColor;
-}
-.v1 > .saida { color: var(--verde); }
-.v0 > .saida { color: var(--vermelho); }
 
 /* Encaixes da Etapa 2 */
 .slot {
@@ -94,11 +81,8 @@
 .slot.cheio { border-style: solid; border-color: var(--azul); color: var(--azul); font-size: 24px; background: rgba(var(--azul-rgb), .08); }
 .slot.slot-neg.cheio { font-size: 18px; }
 .slot.slot-var.cheio { color: var(--texto); font-size: 18px; font-weight: 700; flex-direction: column; gap: 0; line-height: 1.1; }
-.slot.slot-var.cheio .bit { font-size: 11px; font-weight: 400; color: var(--texto2); }
 .slot.slot-var.cheio.v1 { border-color: var(--verde); }
-.slot.slot-var.cheio.v1 .bit { color: var(--verde); }
 .slot.slot-var.cheio.v0 { border-color: var(--vermelho); }
-.slot.slot-var.cheio.v0 .bit { color: var(--vermelho); }
 .slot.aceita { border-color: var(--ambar); color: var(--ambar); animation: pulsar 1s infinite; }
 .slot.sobre { background: rgba(var(--ambar-rgb), .18); }
 .gate.neg-vazio { border-style: dashed; }
@@ -150,6 +134,44 @@
 .extra:empty { display: none; }
 .extra { margin-top: 14px; background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; padding: 14px; overflow-x: auto; }
 .extra h4 { margin: 0 0 8px; font-size: 15px; }
+.desafio-layout { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 18px; align-items: start; }
+.expressao-desafio-painel, .tabela-desafio, .painel-fios { min-width: 0; }
+.expressao-desafio { margin: 0; padding: 14px; border: 1px solid var(--borda-forte); border-radius: 8px; background: var(--painel2); color: var(--ambar); font: 700 20px var(--mono); overflow-wrap: anywhere; }
+.painel-fios { grid-column: 1 / -1; }
+.tabela-desafio .tabela { width: auto; }
+.tabela-desafio .tabela th, .tabela-desafio .tabela td { padding: 6px 12px; }
+.tabela-desafio .tabela tr.atual td { outline: 1px solid rgba(var(--ambar-rgb), .35); }
+.tabela-desafio .tabela td.pendente { color: var(--texto2); }
+.legenda-desafio { color: var(--texto2); font-size: 13px; margin: 10px 0 0; }
+.linha-desafio { color: var(--texto2); margin: 4px 0 10px; }
+.entradas-desafio { display: flex; flex-wrap: wrap; gap: 8px; }
+.conexao-fios { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+.origem-fio { flex: none; padding: 7px 9px; border: 1px solid var(--borda-forte); border-radius: 8px; color: var(--azul); font: 700 12px var(--mono); }
+.fio-desafio { flex: 1 1 24px; min-width: 24px; margin: 0; }
+.fio-desafio.fio-erro { background: var(--vermelho); box-shadow: 0 0 8px var(--vermelho); }
+.terminais-fios { display: flex; flex-direction: column; gap: 8px; }
+.terminal-fio { min-width: 130px; padding: 9px 12px; border: 2px solid var(--borda-forte); border-radius: 8px; background: var(--painel2); color: var(--texto); font: 700 14px var(--mono); cursor: pointer; }
+.terminal-fio:hover:not(:disabled) { transform: translateX(2px); }
+.terminal-fio:disabled { cursor: not-allowed; opacity: .6; }
+.terminal-v:hover:not(:disabled) { border-color: var(--verde); color: var(--verde); }
+.terminal-f:hover:not(:disabled) { border-color: var(--vermelho); color: var(--vermelho); }
+.feedback-desafio { margin: 12px 0 0; color: var(--verde); }
+.feedback-desafio.erro { color: var(--vermelho); }
+.expressoes-comparadas { display: grid; gap: 10px; }
+.expressoes-comparadas p { margin: 0; }
+.expressoes-comparadas .expressao-desafio { display: block; }
+.expressao-label { display: block; margin-bottom: 4px; color: var(--texto2); font: 12px var(--display); }
+.equivalencia-final { color: var(--texto2); font-size: 13px; margin: 10px 0 0; }
+.painel-fios .pergunta-equivalencia { color: var(--texto2); }
+.ranking-sala { margin: 0 0 24px; padding: 16px; background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; }
+.ranking-sala h2 { margin: 0 0 4px; font-size: 20px; }
+.ranking-sala p { color: var(--texto2); margin: 0 0 12px; }
+.form-jogador { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.form-jogador label { color: var(--texto2); }
+.form-jogador input { min-width: 180px; padding: 8px 10px; border: 1px solid var(--borda-forte); border-radius: 8px; background: var(--painel2); color: var(--texto); font: inherit; }
+.lista-ranking { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px 20px; margin: 14px 0 0; padding-left: 26px; }
+.lista-ranking li { padding: 4px 0; color: var(--texto); }
+.lista-ranking:empty { display: none; }
 
 /* ---------- Bandeja de peças ---------- */
 .bandeja:empty { display: none; }
@@ -182,4 +204,6 @@
   .interruptor { margin: 0; }
   .porta-area { flex-direction: row; justify-content: center; }
   .porta { width: 80px; height: 110px; }
+  .desafio-layout { grid-template-columns: 1fr; }
+  .hud-status { gap: 10px; flex-wrap: wrap; }
 }

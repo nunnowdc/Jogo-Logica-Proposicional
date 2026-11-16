@@ -24,10 +24,10 @@ const INTRO_ETAPAS = {
     resumo: 'O circuito já está montado. Ligue e desligue interruptores até a lâmpada acender.',
     itens: [
       'Clique em um interruptor para alternar entre <b class="txt-v">V</b> e <b class="txt-f">F</b>. Cada clique conta como uma jogada.',
-      'Cada porta lógica mostra seu valor em tempo real: borda <b class="txt-v">verde</b> = V, borda <b class="txt-f">vermelha</b> = F.',
+      'As portas destacam os resultados por cor, sem exibir caixas com valores sobre o circuito.',
       'A lâmpada acende quando a fórmula inteira é V, e aí a porta abre.',
       'Se as jogadas acabarem com a lâmpada apagada, o circuito entra em curto e você recomeça.',
-      'Menos jogadas = mais estrelas. Consultar a tabela-verdade custa 1 estrela.',
+      'Você tem 120 segundos por fase. Menos jogadas rendem mais estrelas; consultar a tabela-verdade custa 1 estrela.',
     ],
   },
   2: {
@@ -41,10 +41,24 @@ const INTRO_ETAPAS = {
       'Cada peça colocada conta como jogada: acertar com menos peças vale mais estrelas.',
     ],
   },
+  3: {
+    titulo: 'Etapa 3 · Fios da tabela-verdade',
+    resumo: 'Calcule a saída da expressão para cada linha e conecte o fio ao valor lógico correto.',
+    itens: [
+      'A tabela mostra as combinações possíveis das variáveis. A coluna de saída é preenchida conforme você resolve cada linha.',
+      'Leia os valores V/F da combinação atual e avalie a expressão usando as regras dos conectivos.',
+      'Conecte a saída ao terminal V ou F. Uma conexão incorreta conta como tentativa, mas você pode tentar novamente.',
+      'Resolva todas as linhas para abrir a porta. A última fase compara fórmulas e pede um contraexemplo de equivalência.',
+      'Conexões corretas sem erros rendem mais estrelas.',
+    ],
+  },
 };
 
 /* ---------- Progresso salvo (localStorage com try/catch) ---------- */
 const CHAVE_SAVE = 'circuito-do-conectivo-v1';
+const CHAVE_RANKING = 'circuito-do-conectivo-ranking-v1';
+const CHAVE_JOGADOR = 'circuito-do-conectivo-jogador-v1';
+const TEMPO_POR_FASE = 120;
 
 function carregarProgresso() {
   try {
@@ -61,7 +75,26 @@ function salvarProgresso() {
   try { localStorage.setItem(CHAVE_SAVE, JSON.stringify(progresso)); } catch (e) { /* ignora */ }
 }
 
+function carregarRanking() {
+  try {
+    const dados = JSON.parse(localStorage.getItem(CHAVE_RANKING) || '[]');
+    return Array.isArray(dados)
+      ? dados.filter(item => item && typeof item.nome === 'string' && Number.isFinite(item.estrelas) && item.estrelas >= 0)
+      : [];
+  } catch (e) { return []; }
+}
+
+function salvarRanking() {
+  try { localStorage.setItem(CHAVE_RANKING, JSON.stringify(ranking)); } catch (e) { /* ignora */ }
+}
+
+function carregarNomeJogador() {
+  try { return localStorage.getItem(CHAVE_JOGADOR) || ''; } catch (e) { return ''; }
+}
+
 let progresso = carregarProgresso();
+let ranking = carregarRanking();
+let nomeJogador = carregarNomeJogador();
 
 /* Estado da fase em andamento */
 let jogo = null;
@@ -84,6 +117,54 @@ function faseDesbloqueada(i) {
   return i === 0 || (progresso.estrelas[FASES[i - 1].id] || 0) > 0;
 }
 
+function formatarTempo(segundos) {
+  return `${Math.floor(segundos / 60)}:${String(segundos % 60).padStart(2, '0')}`;
+}
+
+function atualizarCronometro() {
+  if (!jogo || jogo.fim || !jogo.tempoFim) return;
+  jogo.tempoRestante = Math.max(0, Math.ceil((jogo.tempoFim - Date.now()) / 1000));
+  const visor = $('#hud-tempo');
+  visor.textContent = `Tempo: ${formatarTempo(jogo.tempoRestante)}`;
+  visor.classList.toggle('alerta', jogo.tempoRestante <= 30);
+  if (jogo.tempoRestante === 0) perder('tempo');
+}
+
+function iniciarCronometro() {
+  if (!jogo || jogo.fim || jogo.cronometro) return;
+  jogo.tempoFim = Date.now() + TEMPO_POR_FASE * 1000;
+  atualizarCronometro();
+  jogo.cronometro = setInterval(atualizarCronometro, 1000);
+}
+
+function pararCronometro() {
+  if (!jogo) return;
+  if (jogo.cronometro) clearInterval(jogo.cronometro);
+  jogo.cronometro = null;
+  jogo.aguardandoCronometro = false;
+}
+
+function registrarPontuacao() {
+  const nome = nomeJogador.trim() || 'Jogador';
+  const estrelas = Object.values(progresso.estrelas).reduce((a, b) => a + b, 0);
+  const existente = ranking.find(item => item.nome.toLocaleLowerCase() === nome.toLocaleLowerCase());
+  if (existente) existente.estrelas = Math.max(existente.estrelas, estrelas);
+  else ranking.push({ nome: nome, estrelas: estrelas });
+  ranking.sort((a, b) => b.estrelas - a.estrelas || a.nome.localeCompare(b.nome));
+  ranking = ranking.slice(0, 10);
+  salvarRanking();
+}
+
+function renderRanking() {
+  const input = $('#nome-jogador');
+  input.value = nomeJogador;
+  const lista = $('#lista-ranking');
+  lista.innerHTML = '';
+  ranking.forEach(item => {
+    lista.appendChild(el('li', null, `${item.nome} — ★ ${item.estrelas}`));
+  });
+}
+
 /* =====================================================================
    MENU
    ===================================================================== */
@@ -91,7 +172,7 @@ function renderMenu() {
   const cont = $('#lista-fases');
   cont.innerHTML = '';
 
-  [1, 2].forEach(etapa => {
+  [1, 2, 3].forEach(etapa => {
     const bloco = el('div', 'bloco-etapa');
     bloco.appendChild(el('h3', null, INTRO_ETAPAS[etapa].titulo));
     bloco.appendChild(el('p', 'etapa-desc', INTRO_ETAPAS[etapa].resumo));
@@ -116,12 +197,14 @@ function renderMenu() {
 
   const total = Object.values(progresso.estrelas).reduce((a, b) => a + b, 0);
   $('#total-estrelas').textContent = `★ ${total} / ${FASES.length * 3}`;
+  renderRanking();
 }
 
 /* =====================================================================
    ABRIR / REINICIAR FASE
    ===================================================================== */
 function abrirFase(i) {
+  pararCronometro();
   const f = FASES[i];
   jogo = {
     idx: i,
@@ -135,6 +218,13 @@ function abrirFase(i) {
     usouTabela: false,
     fim: false,
     venceu: false,
+    linhaDesafio: 0,
+    respostas: {},
+    feedback: '',
+    tempoRestante: TEMPO_POR_FASE,
+    tempoFim: null,
+    cronometro: null,
+    aguardandoCronometro: false,
   };
   mostrarTela('tela-jogo');
   renderFase();
@@ -144,8 +234,9 @@ function abrirFase(i) {
   if (primeiraDaEtapa && !progresso.introVista[f.etapa]) {
     progresso.introVista[f.etapa] = true;
     salvarProgresso();
+    jogo.aguardandoCronometro = true;
     mostrarIntro(f.etapa);
-  }
+  } else iniciarCronometro();
 }
 
 /* =====================================================================
@@ -156,6 +247,12 @@ function abrirFase(i) {
    ===================================================================== */
 function linhasDaFase() {
   const f = jogo.fase;
+  if (f.etapa === 3) {
+    const linhas = gerarTabelaVerdade(f.formula, f.variaveis);
+    const indice = Math.min(jogo.linhaDesafio, linhas.length - 1);
+    return [{ formula: f.formula, val: linhas[indice].valoracao,
+              rotulo: `Desafio ${indice + 1} de ${linhas.length}`, mostrarConfig: true }];
+  }
   if (f.etapa === 1) {
     const lamps = lampadasDe(f);
     return lamps.map((form, k) => ({
@@ -178,6 +275,7 @@ function linhasDaFase() {
 /* A lâmpada de uma linha está acesa? (usa o avaliador do logic.js) */
 function lampadaAcesa(linha) {
   const f = jogo.fase;
+  if (f.etapa === 3) return false;
   if (f.etapa === 1) return avaliar(linha.formula, linha.val);
   const concreta = preencher(f.formula, jogo.preench);
   if (!concreta) return false;
@@ -210,14 +308,23 @@ function renderHUD() {
   if (f.etapa === 1) {
     hj.textContent = `Jogadas: ${jogo.jogadas} / ${f.maxJogadas}`;
     hj.classList.toggle('alerta', f.maxJogadas - jogo.jogadas <= 1 && !jogo.venceu);
-  } else {
+  } else if (f.etapa === 2) {
     hj.textContent = `Peças colocadas: ${jogo.jogadas}`;
+    hj.classList.remove('alerta');
+  } else {
+    const total = gerarTabelaVerdade(f.formula, f.variaveis).length;
+    hj.textContent = `Linhas resolvidas: ${jogo.linhaDesafio} / ${total}`;
     hj.classList.remove('alerta');
   }
   $('#hud-estrelas').textContent = estrelasTexto(calcularEstrelas(f, jogo.jogadas, jogo.usouTabela));
+  $('#btn-tabela').hidden = f.etapa === 3;
+  const tempo = $('#hud-tempo');
+  tempo.textContent = `Tempo: ${formatarTempo(jogo.tempoRestante)}`;
+  tempo.classList.toggle('alerta', jogo.tempoRestante <= 30);
 
   // Fórmula em texto, acima do circuito
   const ft = $('#formula-texto');
+  ft.hidden = f.etapa === 3;
   if (f.etapa === 1) {
     ft.innerHTML = '';
     lampadasDe(f).forEach((form, k, arr) => {
@@ -237,8 +344,8 @@ function renderInterruptores() {
   painel.innerHTML = '';
   const cfgs = f.etapa === 2 ? configsDe(f) : [];
 
-  // Sem painel lateral: fase de equivalência ou várias salas (os valores aparecem em cada sala)
-  const semPainel = f.etapa === 2 && cfgs.length !== 1;
+  // Sem painel lateral: fase de equivalência ou várias salas.
+  const semPainel = f.etapa === 3 || (f.etapa === 2 && cfgs.length !== 1);
   $('.sala').classList.toggle('sem-interruptores', semPainel);
   if (semPainel) return;
 
@@ -247,8 +354,7 @@ function renderInterruptores() {
 
   f.variaveis.forEach(v => {
     const b = el('button', 'interruptor' + (val[v] ? ' ligado' : ''));
-    b.innerHTML = `<span class="alavanca"><span class="pino"></span></span><span>${v}</span>` +
-                  `<span class="bitv">${bit(val[v])}</span>`;
+    b.innerHTML = `<span class="alavanca"><span class="pino"></span></span><span>${v}</span>`;
     b.setAttribute('aria-label', `Interruptor ${v}: ${val[v] ? 'verdadeiro' : 'falso'}`);
     if (f.travado || jogo.fim) b.disabled = true;
     else b.onclick = () => alternarInterruptor(v);
@@ -267,16 +373,11 @@ function renderCircuitos() {
     if (linha.rotulo || linha.mostrarConfig) {
       const rot = el('div', 'linha-rotulo');
       if (linha.rotulo) rot.appendChild(el('b', null, linha.rotulo));
-      if (linha.mostrarConfig) {
-        Object.keys(linha.val).forEach(v => {
-          rot.appendChild(el('span', 'chip-val ' + (linha.val[v] ? 'v1' : 'v0'), `${v} = ${bit(linha.val[v])}`));
-        });
-      }
       caixa.appendChild(rot);
     }
 
     const corpo = el('div', 'linha-corpo');
-    corpo.appendChild(renderNo(linha.formula, linha.val));
+    corpo.appendChild(renderNo(linha.formula, jogo.fase.etapa === 3 ? null : linha.val));
     const acesa = lampadaAcesa(linha);
     corpo.appendChild(el('div', 'fio' + (acesa ? ' v1' : '')));
     const lamp = el('div', 'lampada' + (acesa ? ' acesa' : ''));
@@ -298,7 +399,6 @@ function renderNo(no, val) {
   if (ehVar(no)) {
     const d = el('div', 'no no-var' + cor);
     d.appendChild(el('span', null, no.var));
-    if (val) d.appendChild(el('span', 'bit', bit(v)));
     return d;
   }
 
@@ -310,7 +410,6 @@ function renderNo(no, val) {
       const g = el('div', 'no gate' + cor + (jogo.preench[no.slot] ? '' : ' neg-vazio'));
       g.appendChild(renderSlot(no));
       g.appendChild(renderNo(no.child, val));
-      adicionarSaida(g, v);
       return g;
     }
 
@@ -318,7 +417,6 @@ function renderNo(no, val) {
     g.appendChild(renderNo(no.left, val));
     g.appendChild(renderSlot(no));
     g.appendChild(renderNo(no.right, val));
-    adicionarSaida(g, v);
     return g;
   }
 
@@ -333,14 +431,7 @@ function renderNo(no, val) {
     g.appendChild(el('span', 'op', OPS[no.op].simbolo));
     g.appendChild(renderNo(no.right, val));
   }
-  adicionarSaida(g, v);
   return g;
-}
-
-/* Etiqueta com o valor de saída de cada porta (V/F) */
-function adicionarSaida(g, v) {
-  if (v === undefined) return;
-  g.appendChild(el('span', 'saida', bit(v)));
 }
 
 /* ---------- Encaixe interativo ---------- */
@@ -354,7 +445,6 @@ function renderSlot(no, cor = '', v, val) {
     if (no.tipo === 'var') {
       s.className += cor;
       s.appendChild(el('span', null, peca));
-      if (val) s.appendChild(el('span', 'bit', bit(v)));
     } else {
       s.textContent = simboloPeca(peca);
     }
@@ -411,6 +501,10 @@ function renderExtra() {
   const extra = $('#extra');
   extra.innerHTML = '';
   const f = jogo.fase;
+  if (f.etapa === 3) {
+    renderDesafioTabela(extra);
+    return;
+  }
   if (!f.alvoEquivalente) return;
 
   const concreta = preencher(f.formula, jogo.preench);
@@ -438,6 +532,95 @@ function renderExtra() {
     t.appendChild(tr);
   });
   extra.appendChild(t);
+}
+
+function renderDesafioTabela(extra) {
+  const f = jogo.fase;
+  const linhas = gerarTabelaVerdade(f.formula, f.variaveis);
+  const comparar = !!f.compararCom;
+  const indiceAtual = Math.min(jogo.linhaDesafio, linhas.length - 1);
+  const layout = el('div', 'desafio-layout');
+  const painelExpressao = el('section', 'expressao-desafio-painel');
+  painelExpressao.appendChild(el('h4', null, comparar ? 'Expressões para comparar' : 'Expressão lógica'));
+  if (comparar) {
+    const expressao = el('div', 'expressoes-comparadas');
+    [['A', f.formula], ['B', f.compararCom]].forEach(([rotulo, formula]) => {
+      const bloco = el('p');
+      bloco.appendChild(el('span', 'expressao-label', `${rotulo}:`));
+      bloco.appendChild(el('span', 'expressao-desafio', formulaParaTexto(formula)));
+      expressao.appendChild(bloco);
+    });
+    painelExpressao.appendChild(expressao);
+    painelExpressao.appendChild(el('p', 'equivalencia-final', 'Fórmulas equivalentes têm resultados iguais em todas as linhas.'));
+  } else {
+    painelExpressao.appendChild(el('p', 'expressao-desafio', formulaParaTexto(f.formula)));
+  }
+  layout.appendChild(painelExpressao);
+
+  const painelTabela = el('section', 'tabela-desafio');
+  painelTabela.appendChild(el('h4', null, 'Tabela-verdade em construção'));
+
+  const tabela = el('table', 'tabela');
+  const cab = el('tr');
+  f.variaveis.forEach(v => cab.appendChild(el('th', null, v)));
+  cab.appendChild(el('th', null, formulaParaTexto(f.formula)));
+  if (comparar) cab.appendChild(el('th', null, formulaParaTexto(f.compararCom)));
+  cab.appendChild(el('th', null, comparar ? 'Coincidem?' : 'Saída'));
+  tabela.appendChild(cab);
+  linhas.forEach((linha, i) => {
+    const tr = el('tr', i === indiceAtual ? 'atual' : '');
+    f.variaveis.forEach(v => tr.appendChild(el('td', bit(linha.valoracao[v]), bit(linha.valoracao[v]))));
+    const resposta = jogo.respostas[i];
+    if (comparar) {
+      const a = resposta ? resposta.a : undefined;
+      const b = resposta ? resposta.b : undefined;
+      tr.appendChild(el('td', a === undefined ? 'pendente' : bit(a), a === undefined ? '—' : bit(a)));
+      tr.appendChild(el('td', b === undefined ? 'pendente' : bit(b), b === undefined ? '—' : bit(b)));
+      tr.appendChild(el('td', resposta ? bit(resposta.iguais) : 'pendente',
+        resposta ? bit(resposta.iguais) : '—'));
+    } else {
+      tr.appendChild(el('td', resposta === undefined ? 'pendente' : bit(resposta),
+        resposta === undefined ? '—' : bit(resposta)));
+    }
+    tabela.appendChild(tr);
+  });
+  painelTabela.appendChild(tabela);
+  painelTabela.appendChild(el('p', 'legenda-desafio', comparar
+    ? 'Uma única linha diferente já prova que as fórmulas não são equivalentes.'
+    : 'Resolva as linhas em sequência; as saídas corretas ficam registradas na tabela.'));
+  layout.appendChild(painelTabela);
+
+  const painelFios = el('section', 'painel-fios');
+  painelFios.appendChild(el('h4', null, comparar ? 'Os resultados coincidem nesta linha?' : 'Conecte a saída'));
+  painelFios.appendChild(el('p', 'linha-desafio', `Desafio ${indiceAtual + 1} de ${linhas.length}`));
+  painelFios.appendChild(el('p', 'pergunta-equivalencia',
+    comparar ? 'Escolha V se as duas expressões tiverem o mesmo valor; caso contrário, escolha F.' : 'Avalie a expressão para a linha destacada na tabela.'));
+
+  const conexao = el('div', 'conexao-fios');
+  conexao.appendChild(el('span', 'origem-fio', 'SAÍDA'));
+  conexao.appendChild(el('span', 'fio fio-desafio' + (jogo.feedback === 'erro' ? ' fio-erro' : '')));
+  const terminais = el('div', 'terminais-fios');
+  [true, false].forEach(valor => {
+    const terminal = el('button', 'terminal-fio ' + (valor ? 'terminal-v' : 'terminal-f'));
+    terminal.type = 'button';
+    terminal.textContent = comparar
+      ? (valor ? 'V · Iguais' : 'F · Diferentes')
+      : (valor ? 'V · Verdadeiro' : 'F · Falso');
+    terminal.setAttribute('aria-label', comparar
+      ? `Conectar ao terminal ${valor ? 'iguais' : 'diferentes'}`
+      : `Conectar a saída ao terminal ${valor ? 'verdadeiro' : 'falso'}`);
+    terminal.disabled = jogo.fim;
+    terminal.onclick = () => responderDesafio(valor);
+    terminais.appendChild(terminal);
+  });
+  conexao.appendChild(terminais);
+  painelFios.appendChild(conexao);
+  if (jogo.feedback) {
+    painelFios.appendChild(el('p', 'feedback-desafio' + (jogo.feedback === 'erro' ? ' erro' : ''),
+      jogo.feedback === 'erro' ? 'Conexão incorreta. Reavalie os conectivos e tente outra vez.' : 'Conexão correta!'));
+  }
+  layout.appendChild(painelFios);
+  extra.appendChild(layout);
 }
 
 /* ---------- Bandeja de peças (Etapa 2) ---------- */
@@ -521,6 +704,7 @@ function removerPeca(slotId) {
 
 /* Depois de cada jogada: venceu? perdeu? */
 function verificarFimDeJogada() {
+  if (jogo.fase.etapa === 3) return;
   const todas = linhasDaFase().every(lampadaAcesa);
   if (todas) { vencer(); return; }
   if (jogo.fase.etapa === 1 && jogo.jogadas >= jogo.fase.maxJogadas) perder();
@@ -530,21 +714,26 @@ function vencer() {
   jogo.fim = true;
   jogo.venceu = true;
   jogo.selecionada = null;
+  pararCronometro();
   const f = jogo.fase;
   const est = calcularEstrelas(f, jogo.jogadas, jogo.usouTabela);
   progresso.estrelas[f.id] = Math.max(progresso.estrelas[f.id] || 0, est);
   salvarProgresso();
+  registrarPontuacao();
   renderFase();
 
   const ultima = jogo.idx === FASES.length - 1;
-  const unidade = f.etapa === 1 ? 'jogada' : 'peça';
+  const unidade = f.etapa === 1 ? 'jogada' : f.etapa === 2 ? 'peça' : 'tentativa';
   const s = jogo.jogadas === 1 ? '' : 's';
+  const resumoDesafio = f.etapa === 3
+    ? `Você completou <b>${gerarTabelaVerdade(f.formula, f.variaveis).length}</b> linhas em <b>${jogo.jogadas}</b> tentativas. O mínimo para esta fase é <b>${f.criterioEstrelas.tres}</b>.`
+    : `Você resolveu com <b>${jogo.jogadas}</b> ${unidade}${s}. O mínimo possível é <b>${f.criterioEstrelas.tres}</b>.`;
 
   setTimeout(() => {
     abrirModal(
       `<h3>Porta aberta!</h3>
        <div class="estrelas-grandes">${'★'.repeat(est)}<span class="apagada">${'★'.repeat(3 - est)}</span></div>
-       <p>Você resolveu com <b>${jogo.jogadas}</b> ${unidade}${s}. O mínimo possível é <b>${f.criterioEstrelas.tres}</b>.` +
+       <p>${resumoDesafio}` +
        (jogo.usouTabela ? ' A consulta à tabela-verdade custou 1 estrela.' : '') + '</p>',
       [
         { texto: 'Repetir', acao: () => abrirFase(jogo.idx) },
@@ -558,17 +747,47 @@ function vencer() {
   }, 900);
 }
 
-function perder() {
+function responderDesafio(resposta) {
+  if (jogo.fim) return;
+  const f = jogo.fase;
+  const linhas = gerarTabelaVerdade(f.formula, f.variaveis);
+  const linha = linhas[jogo.linhaDesafio];
+  const valorA = linha.resultado;
+  const valorB = f.compararCom ? avaliar(f.compararCom, linha.valoracao) : undefined;
+  const correta = f.compararCom ? valorA === valorB : valorA;
+  jogo.jogadas++;
+  if (resposta !== correta) {
+    jogo.feedback = 'erro';
+    renderFase();
+    return;
+  }
+
+  jogo.respostas[jogo.linhaDesafio] = f.compararCom
+    ? { a: valorA, b: valorB, iguais: resposta }
+    : resposta;
+  jogo.linhaDesafio++;
+  jogo.feedback = '';
+  if (jogo.linhaDesafio === linhas.length) vencer();
+  else renderFase();
+}
+
+function perder(motivo) {
+  if (jogo.fim) return;
   jogo.fim = true;
+  pararCronometro();
   renderFase();
-  const sala = $('.sala');
-  sala.classList.remove('curto');
-  void sala.offsetWidth;          // reinicia a animação
-  sala.classList.add('curto');
+  if (motivo !== 'tempo') {
+    const sala = $('.sala');
+    sala.classList.remove('curto');
+    void sala.offsetWidth;
+    sala.classList.add('curto');
+  }
+  const textoDerrota = motivo === 'tempo'
+    ? 'O tempo desta fase terminou. Recomece para tentar novamente.'
+    : `As ${jogo.fase.maxJogadas} jogadas acabaram e a lâmpada continua apagada. Olhe para as portas em vermelho: qual subfórmula precisa mudar de valor?`;
   abrirModal(
-    `<h3>Curto-circuito!</h3>
-     <p>As ${jogo.fase.maxJogadas} jogadas acabaram e a lâmpada continua apagada.
-        Olhe para as portas em vermelho: qual subfórmula precisa mudar de valor?</p>`,
+    `<h3>${motivo === 'tempo' ? 'Tempo esgotado!' : 'Curto-circuito!'}</h3>
+     <p>${textoDerrota}</p>`,
     [
       { texto: 'Menu', acao: irParaMenu },
       { texto: 'Tentar de novo', primario: true, acao: () => abrirFase(jogo.idx) },
@@ -649,7 +868,12 @@ function abrirModal(html, botoes, variante) {
   if (principal) principal.focus();
 }
 
-function fecharModal() { $('#modal').classList.add('oculto'); }
+function fecharModal() {
+  $('#modal').classList.add('oculto');
+  if (jogo && jogo.aguardandoCronometro && $('#tela-jogo').classList.contains('ativa')) {
+    iniciarCronometro();
+  }
+}
 
 function mostrarIntro(etapa) {
   const info = INTRO_ETAPAS[etapa];
@@ -666,13 +890,18 @@ function mostrarIntro(etapa) {
 
 function mostrarComoJogar() {
   mostrarIntro(1);
-  // Ao fechar a primeira, mostra a segunda
   const btn = $('#modal-caixa .btn-primario');
   btn.textContent = 'Próximo: Etapa 2';
-  btn.onclick = () => mostrarIntro(2);
+  btn.onclick = () => {
+    mostrarIntro(2);
+    const proximo = $('#modal-caixa .btn-primario');
+    proximo.textContent = 'Próximo: Etapa 3';
+    proximo.onclick = () => mostrarIntro(3);
+  };
 }
 
 function irParaMenu() {
+  pararCronometro();
   fecharModal();
   renderMenu();
   mostrarTela('tela-menu');
@@ -698,6 +927,14 @@ function iniciar() {
   $('#btn-ajuda').onclick = () => mostrarIntro(jogo.fase.etapa);
   $('#btn-como-jogar').onclick = mostrarComoJogar;
   $('#btn-final-menu').onclick = irParaMenu;
+  $('#form-jogador').addEventListener('submit', e => {
+    e.preventDefault();
+    const nome = $('#nome-jogador').value.trim().slice(0, 24);
+    if (!nome) { $('#nome-jogador').focus(); return; }
+    nomeJogador = nome;
+    try { localStorage.setItem(CHAVE_JOGADOR, nomeJogador); } catch (e) { /* o ranking ainda funciona na sessão */ }
+    renderRanking();
+  });
   $('#btn-reset').onclick = () => abrirModal(
     '<h3>Apagar progresso?</h3><p>Todas as estrelas e fases desbloqueadas serão perdidas.</p>',
     [

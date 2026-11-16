@@ -24,7 +24,7 @@
    ===================================================================== */
 
 /* Atalhos para as variáveis, só para deixar as fórmulas mais legíveis */
-const P = V('P'), Q = V('Q'), R = V('R');
+const P = V('P'), Q = V('Q'), R = V('R'), S = V('S');
 
 const FASES = [
   /* ===================== ETAPA 1 — INTERRUPTORES ===================== */
@@ -197,6 +197,41 @@ const FASES = [
     pecasDisponiveis: { AND: 1, OR: 1, IMPLIES: 1, IFF: 1, NOT: 1 },
     maxJogadas: null,
     criterioEstrelas: { tres: 2, dois: 4 },
+  },
+
+  /* ===================== ETAPA 3 — FIOS DA TABELA-VERDADE ===================== */
+  {
+    id: '3-1', etapa: 3,
+    titulo: 'Saída lógica',
+    dica: 'Resolva cada combinação da tabela e conecte a saída da expressão ao valor correto.',
+    formula: IMPLICA(P, Q),
+    variaveis: ['P', 'Q'],
+    criterioEstrelas: { tres: 4, dois: 6 },
+  },
+  {
+    id: '3-2', etapa: 3,
+    titulo: 'Circuito em série',
+    dica: 'Avalie primeiro a disjunção e a negação; depois confira a conjunção em cada linha.',
+    formula: E(OU(P, NAO(Q)), R),
+    variaveis: ['P', 'Q', 'R'],
+    criterioEstrelas: { tres: 8, dois: 10 },
+  },
+  {
+    id: '3-3', etapa: 3,
+    titulo: 'Núcleo de quatro variáveis',
+    dica: 'O bicondicional compara duas subfórmulas. Calcule os dois lados antes de decidir se são iguais.',
+    formula: SSE(IMPLICA(P, Q), OU(R, NAO(S))),
+    variaveis: ['P', 'Q', 'R', 'S'],
+    criterioEstrelas: { tres: 16, dois: 18 },
+  },
+  {
+    id: '3-4', etapa: 3,
+    titulo: 'Prova por contraexemplo',
+    dica: 'Compare P → Q com P ∨ Q. Conecte V quando os resultados coincidirem e F quando forem diferentes.',
+    formula: IMPLICA(P, Q),
+    compararCom: OU(P, Q),
+    variaveis: ['P', 'Q'],
+    criterioEstrelas: { tres: 4, dois: 6 },
   },
 ];
 

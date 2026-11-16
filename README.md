@@ -23,7 +23,7 @@ git clone https://github.com/nunnowdc/Jogo-Logica-Proposicional.git
 O circuito já está montado. O jogador liga e desliga as variáveis (P, Q, R) até a fórmula inteira dar **V** e a lâmpada acender.
 
 - Cada clique conta como uma jogada, e as jogadas são limitadas. Se acabarem com a lâmpada apagada, o circuito entra em curto.
-- Cada porta lógica mostra seu valor em tempo real (verde = V, vermelho = F).
+- As portas destacam o estado por cor (verde/vermelho), sem etiquetas numéricas sobre os componentes.
 - Em algumas fases, o clique que conserta uma parte da fórmula quebra a outra, ou é preciso acender **duas lâmpadas ao mesmo tempo** (satisfazer duas fórmulas juntas).
 
 ### Etapa 2 · Construção
@@ -32,6 +32,17 @@ Os interruptores ficam travados e o jogador **monta o circuito**, arrastando con
 - As peças são limitadas, então é preciso planejar.
 - Encaixes de negação (¬) são opcionais.
 - Desafios avançados: fazer o mesmo circuito funcionar em duas salas com valores diferentes, e construir um circuito **equivalente** a `P → Q` usando só `∨` e `¬`, válido em todas as linhas da tabela-verdade.
+
+### Etapa 3 · Fios da tabela-verdade
+O jogador avalia uma expressão para cada combinação de valores e conecta a saída do circuito ao terminal **V** ou **F** correspondente.
+
+- A tabela-verdade é preenchida à medida que cada linha é resolvida.
+- Uma conexão incorreta permite tentar novamente, mas conta como tentativa e pode reduzir as estrelas.
+- A dificuldade cresce de duas para quatro variáveis, com expressões cada vez mais complexas.
+- O desafio final procura um contraexemplo para a equivalência entre `P → Q` e `P ∨ Q`.
+
+### Tempo e ranking
+Cada fase tem limite de **120 segundos**. Ao zerar, a tentativa termina e é possível recomeçar. O ranking da sala é local ao navegador: registre um nome e acumule estrelas ao concluir fases. Para compartilhar o ranking entre dispositivos seria necessário um servidor, que este projeto não possui.
 
 ### Pontuação
 Menos jogadas ou menos peças rendem mais estrelas (até ★★★ por fase). Consultar a tabela-verdade custa uma estrela.
@@ -82,10 +93,6 @@ img/              imagens e prints
 
 Distribuído sob a licença MIT. Veja o arquivo [LICENSE](LICENSE).
 
-# Adições a serem implementadas
+## Próximas melhorias
 
-- Remover elemtnos do frontend (caixas de valor logico)
-- Add uma terceira etapa de equivalencia logica
-- adicionar tempo em todas as fases (se terminar, perdeu)
-- ranking da sala
-- multiplayer
+- Multiplayer entre jogadores.
