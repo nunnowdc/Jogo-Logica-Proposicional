@@ -39,7 +39,11 @@ O jogador avalia uma expressão para cada combinação de valores e conecta a sa
 - A tabela-verdade é preenchida à medida que cada linha é resolvida.
 - Uma conexão incorreta permite tentar novamente, mas conta como tentativa e pode reduzir as estrelas.
 - A dificuldade cresce de duas para quatro variáveis, com expressões cada vez mais complexas.
-- O desafio final procura um contraexemplo para a equivalência entre `P → Q` e `P ∨ Q`.
+- A fase “Prova por contraexemplo” compara `P → Q` e `P ∨ Q`.
+- As três fases adicionais exploram condicional, bicondicional e fórmulas com quatro variáveis.
+
+### Multiplayer local
+No menu, informe os nomes de dois jogadores para iniciar uma partida no mesmo dispositivo. Cada participante recebe três fases sorteadas; os turnos alternam após cada fase concluída. Cada jogador tem 120 segundos por tentativa, e apenas o tempo do turno ativo soma ao total. Vence o menor tempo total; em empate, contam menos tentativas e, persistindo a igualdade, ambos resolvem a fase extra de desempate.
 
 ### Tempo e ranking
 Cada fase tem limite de **120 segundos**. Ao zerar, a tentativa termina e é possível recomeçar. O ranking da sala é local ao navegador: registre um nome e acumule estrelas ao concluir fases. Para compartilhar o ranking entre dispositivos seria necessário um servidor, que este projeto não possui.

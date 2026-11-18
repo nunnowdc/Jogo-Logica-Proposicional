@@ -95,6 +95,7 @@ function carregarNomeJogador() {
 let progresso = carregarProgresso();
 let ranking = carregarRanking();
 let nomeJogador = carregarNomeJogador();
+let partidaLocal = null;
 
 /* Estado da fase em andamento */
 let jogo = null;
@@ -112,6 +113,11 @@ function estrelasTexto(n, total = 3) {
 function simboloPeca(p) { return OPS[p] ? OPS[p].simbolo : p; }
 function nomePeca(p)    { return OPS[p] ? OPS[p].nome : 'Variável ' + p; }
 function bit(v)         { return v ? 'V' : 'F'; }
+function escaparHTML(texto) {
+  return String(texto).replace(/[&<>"']/g, caractere => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[caractere]);
+}
 
 function faseDesbloqueada(i) {
   return i === 0 || (progresso.estrelas[FASES[i - 1].id] || 0) > 0;
@@ -121,17 +127,39 @@ function formatarTempo(segundos) {
   return `${Math.floor(segundos / 60)}:${String(segundos % 60).padStart(2, '0')}`;
 }
 
+function atualizarStatusPartida() {
+  const visor = $('#match-status');
+  if (!partidaLocal) {
+    visor.hidden = true;
+    return;
+  }
+  const jogadorAtivo = partidaLocal.jogadores[partidaLocal.ativo];
+  const placar = partidaLocal.jogadores.map(jogador => {
+    const tempoAtual = jogador === jogadorAtivo && jogador.iniciouEm !== null
+      ? Date.now() - jogador.iniciouEm
+      : 0;
+    const tempo = jogador.tempoMs + tempoAtual;
+    return `${jogador.nome}: ${jogador.concluidas}/3 · ${Math.floor(tempo / 1000)} s · ${jogador.tentativas} tentativas`;
+  }).join(' | ');
+  visor.textContent = `${partidaLocal.desempate ? 'Fase extra de desempate' : `Vez de ${jogadorAtivo.nome}`} — ${placar}`;
+  visor.hidden = false;
+}
+
 function atualizarCronometro() {
   if (!jogo || jogo.fim || !jogo.tempoFim) return;
   jogo.tempoRestante = Math.max(0, Math.ceil((jogo.tempoFim - Date.now()) / 1000));
   const visor = $('#hud-tempo');
   visor.textContent = `Tempo: ${formatarTempo(jogo.tempoRestante)}`;
   visor.classList.toggle('alerta', jogo.tempoRestante <= 30);
+  atualizarStatusPartida();
   if (jogo.tempoRestante === 0) perder('tempo');
 }
 
 function iniciarCronometro() {
   if (!jogo || jogo.fim || jogo.cronometro) return;
+  if (partidaLocal && jogo.partidaLocal) {
+    partidaLocal.jogadores[partidaLocal.ativo].iniciouEm = Date.now();
+  }
   jogo.tempoFim = Date.now() + TEMPO_POR_FASE * 1000;
   atualizarCronometro();
   jogo.cronometro = setInterval(atualizarCronometro, 1000);
@@ -163,6 +191,173 @@ function renderRanking() {
   ranking.forEach(item => {
     lista.appendChild(el('li', null, `${item.nome} — ★ ${item.estrelas}`));
   });
+}
+
+function sortearTresFasesMultiplayer() {
+  const disponiveis = FASES.filter(f => f.etapa === 3 && !f.desempate);
+  for (let i = disponiveis.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [disponiveis[i], disponiveis[j]] = [disponiveis[j], disponiveis[i]];
+  }
+  return disponiveis.slice(0, 3).map(f => f.id);
+}
+
+function criarEstadoFase(i) {
+  const f = FASES[i];
+  return {
+    idx: i,
+    fase: f,
+    val: f.etapa === 1 ? { ...f.estadoInicial } : null,
+    jogadas: 0,
+    preench: {},
+    pecas: { ...(f.pecasDisponiveis || {}) },
+    selecionada: null,
+    arrastando: null,
+    usouTabela: false,
+    fim: false,
+    venceu: false,
+    linhaDesafio: 0,
+    respostas: {},
+    feedback: '',
+    tempoRestante: TEMPO_POR_FASE,
+    tempoFim: null,
+    cronometro: null,
+    aguardandoCronometro: false,
+  };
+}
+
+function iniciarPartidaLocal(nome1, nome2) {
+  const faseDesempate = FASES.find(f => f.desempate);
+  const pool = FASES.filter(f => f.etapa === 3 && !f.desempate);
+  if (pool.length < 3 || !faseDesempate) {
+    abrirModal('<h3>Partida indisponível</h3><p>São necessárias pelo menos três fases de desafio e uma fase de desempate.</p>',
+      [{ texto: 'Ok', primario: true }]);
+    return;
+  }
+
+  pararCronometro();
+  partidaLocal = {
+    jogadores: [
+      { nome: nome1, fases: sortearTresFasesMultiplayer(), concluidas: 0, tempoMs: 0, tentativas: 0, iniciouEm: null, tempoDesempateMs: 0, tentativasDesempate: 0 },
+      { nome: nome2, fases: sortearTresFasesMultiplayer(), concluidas: 0, tempoMs: 0, tentativas: 0, iniciouEm: null, tempoDesempateMs: 0, tentativasDesempate: 0 },
+    ],
+    ativo: 0,
+    proximo: 0,
+    desempate: false,
+    idFaseDesempate: faseDesempate.id,
+    encerrada: false,
+  };
+  iniciarTurnoMultiplayer(0);
+}
+
+function iniciarTurnoMultiplayer(indiceJogador) {
+  if (!partidaLocal || partidaLocal.encerrada) return;
+  pararCronometro();
+  partidaLocal.ativo = indiceJogador;
+  const jogador = partidaLocal.jogadores[indiceJogador];
+  const id = partidaLocal.desempate
+    ? partidaLocal.idFaseDesempate
+    : jogador.fases[jogador.concluidas];
+  const idx = FASES.findIndex(f => f.id === id);
+  if (idx < 0) throw new Error('Fase da partida local não encontrada: ' + id);
+
+  jogo = criarEstadoFase(idx);
+  jogo.partidaLocal = true;
+  jogo.desempate = partidaLocal.desempate;
+  jogo.aguardandoCronometro = true;
+  mostrarTela('tela-jogo');
+  renderFase();
+  const rotulo = partidaLocal.desempate ? 'Fase extra de desempate' : `Fase ${jogador.concluidas + 1} de 3`;
+  abrirModal(
+    `<h3>Vez de ${escaparHTML(jogador.nome)}</h3>
+     <p>${rotulo}: <b>${jogo.fase.titulo}</b>.</p>
+     <p>Prepare o jogador atual e inicie quando estiver pronto. Os 120 segundos começam no botão abaixo.</p>`,
+    [{ texto: 'Começar turno', primario: true, acao: iniciarCronometro }]
+  );
+}
+
+function registrarTempoDoTurno() {
+  if (!partidaLocal || !jogo || !jogo.partidaLocal) return;
+  const jogador = partidaLocal.jogadores[partidaLocal.ativo];
+  if (jogador.iniciouEm === null) return;
+  const decorrido = Math.max(0, Date.now() - jogador.iniciouEm);
+  jogador.iniciouEm = null;
+  if (jogo.desempate) {
+    jogador.tempoDesempateMs += decorrido;
+    jogador.tentativasDesempate += jogo.jogadas;
+  } else {
+    jogador.tempoMs += decorrido;
+    jogador.tentativas += jogo.jogadas;
+  }
+}
+
+function tempoEmSegundos(jogador, desempate) {
+  return Math.floor((desempate ? jogador.tempoDesempateMs : jogador.tempoMs) / 1000);
+}
+
+function compararCompetidores(tempo) {
+  const [a, b] = partidaLocal.jogadores;
+  const diferencaTempo = tempo(a, partidaLocal.desempate) - tempo(b, partidaLocal.desempate);
+  if (diferencaTempo !== 0) return diferencaTempo < 0 ? 0 : 1;
+  const tentativasA = partidaLocal.desempate ? a.tentativasDesempate : a.tentativas;
+  const tentativasB = partidaLocal.desempate ? b.tentativasDesempate : b.tentativas;
+  if (tentativasA !== tentativasB) return tentativasA < tentativasB ? 0 : 1;
+  return -1;
+}
+
+function concluirTurnoMultiplayer() {
+  const partida = partidaLocal;
+  const jogador = partida.jogadores[partida.ativo];
+  registrarTempoDoTurno();
+
+  if (jogo.desempate) {
+    if (partida.ativo === 0) {
+      iniciarTurnoMultiplayer(1);
+      return;
+    }
+    partida.encerrada = true;
+    const vencedor = compararCompetidores(tempoEmSegundos, null);
+    const mensagem = vencedor < 0
+      ? 'A partida terminou empatada: tempo e tentativas iguais na fase extra.'
+      : `${escaparHTML(partida.jogadores[vencedor].nome)} venceu o desempate!`;
+    abrirModal(`<h3>Fim da partida</h3><p>${mensagem}</p>
+      <p>${escaparHTML(partida.jogadores[0].nome)}: ${tempoEmSegundos(partida.jogadores[0], true)} s, ${partida.jogadores[0].tentativasDesempate} tentativas.<br>
+      ${escaparHTML(partida.jogadores[1].nome)}: ${tempoEmSegundos(partida.jogadores[1], true)} s, ${partida.jogadores[1].tentativasDesempate} tentativas.</p>`,
+      [{ texto: 'Voltar ao menu', primario: true, acao: irParaMenu }]);
+    return;
+  }
+
+  jogador.concluidas++;
+  jogo.fim = true;
+  jogo.venceu = true;
+  renderFase();
+
+  const todosConcluiram = partida.jogadores.every(p => p.concluidas === 3);
+  if (todosConcluiram) {
+    const vencedor = compararCompetidores(tempoEmSegundos, null);
+    if (vencedor < 0) {
+      partida.desempate = true;
+      abrirModal('<h3>Empate!</h3><p>O tempo e o número de tentativas ficaram iguais. Cada jogador resolverá a mesma fase extra.</p>',
+        [{ texto: `Desempate: ${partida.jogadores[0].nome}`, primario: true, acao: () => iniciarTurnoMultiplayer(0) }]);
+      return;
+    }
+
+    partida.encerrada = true;
+    abrirModal(`<h3>${escaparHTML(partida.jogadores[vencedor].nome)} venceu!</h3>
+      <p>Resultado pelo tempo total das três fases. Em caso de tempo igual, venceu quem precisou de menos tentativas.</p>
+      <p>${escaparHTML(partida.jogadores[0].nome)}: ${tempoEmSegundos(partida.jogadores[0], false)} s, ${partida.jogadores[0].tentativas} tentativas.<br>
+      ${escaparHTML(partida.jogadores[1].nome)}: ${tempoEmSegundos(partida.jogadores[1], false)} s, ${partida.jogadores[1].tentativas} tentativas.</p>`,
+      [{ texto: 'Voltar ao menu', primario: true, acao: irParaMenu }]);
+    return;
+  }
+
+  const proximo = 1 - partida.ativo;
+  partida.proximo = partida.jogadores[proximo].concluidas < 3 ? proximo : partida.ativo;
+  abrirModal(`<h3>Fase concluída</h3>
+    <p>${escaparHTML(jogador.nome)} completou ${escaparHTML(jogo.fase.titulo)}.</p>
+    <p>Tempo acumulado: ${tempoEmSegundos(jogador, false)} s · Tentativas: ${jogador.tentativas}</p>
+    <p>Prepare o próximo jogador.</p>`,
+    [{ texto: `Passar para ${partida.jogadores[partida.proximo].nome}`, primario: true, acao: () => iniciarTurnoMultiplayer(partida.proximo) }]);
 }
 
 /* =====================================================================
@@ -205,28 +400,10 @@ function renderMenu() {
    ===================================================================== */
 function abrirFase(i) {
   pararCronometro();
-  const f = FASES[i];
-  jogo = {
-    idx: i,
-    fase: f,
-    val: f.etapa === 1 ? { ...f.estadoInicial } : null,  // interruptores (Etapa 1)
-    jogadas: 0,
-    preench: {},                                         // encaixe → peça (Etapa 2)
-    pecas: { ...(f.pecasDisponiveis || {}) },            // estoque da bandeja
-    selecionada: null,                                   // peça escolhida por toque/clique
-    arrastando: null,                                    // peça sendo arrastada
-    usouTabela: false,
-    fim: false,
-    venceu: false,
-    linhaDesafio: 0,
-    respostas: {},
-    feedback: '',
-    tempoRestante: TEMPO_POR_FASE,
-    tempoFim: null,
-    cronometro: null,
-    aguardandoCronometro: false,
-  };
+  partidaLocal = null;
+  jogo = criarEstadoFase(i);
   mostrarTela('tela-jogo');
+  $('#match-status').hidden = true;
   renderFase();
 
   // Mostra a introdução da etapa na primeira vez que o jogador chega nela
@@ -303,6 +480,8 @@ function renderHUD() {
   $('#hud-etapa').textContent = `${INTRO_ETAPAS[f.etapa].titulo} · Fase ${n} de ${daEtapa.length}`;
   $('#hud-titulo').textContent = f.titulo;
   $('#dica').textContent = f.dica;
+  $('#btn-reiniciar').hidden = !!partidaLocal;
+  atualizarStatusPartida();
 
   const hj = $('#hud-jogadas');
   if (f.etapa === 1) {
@@ -313,7 +492,7 @@ function renderHUD() {
     hj.classList.remove('alerta');
   } else {
     const total = gerarTabelaVerdade(f.formula, f.variaveis).length;
-    hj.textContent = `Linhas resolvidas: ${jogo.linhaDesafio} / ${total}`;
+    hj.textContent = `Linhas resolvidas: ${jogo.linhaDesafio} / ${total} · Tentativas: ${jogo.jogadas}`;
     hj.classList.remove('alerta');
   }
   $('#hud-estrelas').textContent = estrelasTexto(calcularEstrelas(f, jogo.jogadas, jogo.usouTabela));
@@ -715,6 +894,11 @@ function vencer() {
   jogo.venceu = true;
   jogo.selecionada = null;
   pararCronometro();
+  if (partidaLocal && jogo.partidaLocal) {
+    renderFase();
+    concluirTurnoMultiplayer();
+    return;
+  }
   const f = jogo.fase;
   const est = calcularEstrelas(f, jogo.jogadas, jogo.usouTabela);
   progresso.estrelas[f.id] = Math.max(progresso.estrelas[f.id] || 0, est);
@@ -776,6 +960,20 @@ function perder(motivo) {
   jogo.fim = true;
   pararCronometro();
   renderFase();
+  if (partidaLocal && jogo.partidaLocal && motivo === 'tempo') {
+    registrarTempoDoTurno();
+    const nome = partidaLocal.jogadores[partidaLocal.ativo].nome;
+    abrirModal(`<h3>Tempo esgotado!</h3>
+      <p>${escaparHTML(nome)} não concluiu esta fase a tempo. O tempo e as tentativas já realizadas foram somados ao placar.</p>
+      <p>É possível tentar a mesma fase novamente; o turno continua com ${escaparHTML(nome)}.</p>`,
+      [
+        { texto: 'Desistir', acao: irParaMenu },
+        { texto: 'Tentar de novo', primario: true, acao: () => iniciarTurnoMultiplayer(partidaLocal.ativo) },
+      ],
+      'derrota'
+    );
+    return;
+  }
   if (motivo !== 'tempo') {
     const sala = $('.sala');
     sala.classList.remove('curto');
@@ -859,7 +1057,7 @@ function abrirModal(html, botoes, variante) {
   const linha = el('div', 'modal-botoes');
   botoes.forEach(b => {
     const btn = el('button', 'btn' + (b.primario ? ' btn-primario' : ''), b.texto);
-    btn.onclick = () => { fecharModal(); if (b.acao) b.acao(); };
+    btn.onclick = () => { fecharModal(true); if (b.acao) b.acao(); };
     linha.appendChild(btn);
   });
   caixa.appendChild(linha);
@@ -868,7 +1066,8 @@ function abrirModal(html, botoes, variante) {
   if (principal) principal.focus();
 }
 
-function fecharModal() {
+function fecharModal(forcar) {
+  if (!forcar && partidaLocal && jogo && (jogo.fim || jogo.aguardandoCronometro)) return;
   $('#modal').classList.add('oculto');
   if (jogo && jogo.aguardandoCronometro && $('#tela-jogo').classList.contains('ativa')) {
     iniciarCronometro();
@@ -902,7 +1101,10 @@ function mostrarComoJogar() {
 
 function irParaMenu() {
   pararCronometro();
-  fecharModal();
+  partidaLocal = null;
+  $('#match-status').hidden = true;
+  $('#btn-reiniciar').hidden = false;
+  fecharModal(true);
   renderMenu();
   mostrarTela('tela-menu');
 }
@@ -927,6 +1129,17 @@ function iniciar() {
   $('#btn-ajuda').onclick = () => mostrarIntro(jogo.fase.etapa);
   $('#btn-como-jogar').onclick = mostrarComoJogar;
   $('#btn-final-menu').onclick = irParaMenu;
+  $('#form-multiplayer').addEventListener('submit', e => {
+    e.preventDefault();
+    const nome1 = $('#multiplayer-jogador1').value.trim().slice(0, 24);
+    const nome2 = $('#multiplayer-jogador2').value.trim().slice(0, 24);
+    if (!nome1 || !nome2 || nome1.localeCompare(nome2, undefined, { sensitivity: 'base' }) === 0) {
+      abrirModal('<h3>Nomes dos jogadores</h3><p>Informe dois nomes diferentes para iniciar a partida local.</p>',
+        [{ texto: 'Ok', primario: true }]);
+      return;
+    }
+    iniciarPartidaLocal(nome1, nome2);
+  });
   $('#form-jogador').addEventListener('submit', e => {
     e.preventDefault();
     const nome = $('#nome-jogador').value.trim().slice(0, 24);

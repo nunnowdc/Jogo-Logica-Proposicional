@@ -7,10 +7,13 @@
 
    Campos:
      id               texto único, ex.: '1-3'
-     etapa            1 = interruptores · 2 = construção
+     etapa            1 = interruptores · 2 = construção · 3 = tabela-verdade
      titulo, dica     textos mostrados na tela
      formula          Etapa 1: fórmula (ou lista de fórmulas = várias lâmpadas)
                       Etapa 2: fórmula com encaixes SLOT_BIN / SLOT_NEG / SLOT_VAR
+                      Etapa 3: expressão avaliada linha por linha
+     compararCom      Etapa 3: segunda expressão para desafio de equivalência
+     desempate        Etapa 3: fase extra usada quando a partida local empata
      variaveis        lista das variáveis, ex.: ['P', 'Q']
      estadoInicial    valores dos interruptores, ex.: { P: true, Q: false }
                       Etapa 2: pode ser uma LISTA de configurações (várias salas)
@@ -18,8 +21,8 @@
      travado          false = jogador mexe nos interruptores · true = fixos
      pecasDisponiveis Etapa 2: { AND: 1, OR: 1, NOT: 2, P: 1, ... } · Etapa 1: null
      maxJogadas       Etapa 1: limite de cliques · Etapa 2: null (sem limite)
-     criterioEstrelas { tres: X, dois: Y } — jogadas (Etapa 1) ou peças
-                      colocadas (Etapa 2) para ganhar 3 ou 2 estrelas
+     criterioEstrelas { tres: X, dois: Y } — jogadas (Etapa 1), peças
+                      colocadas (Etapa 2) ou linhas corretas (Etapa 3)
      alvoEquivalente  (opcional) fórmula que a montagem deve imitar
    ===================================================================== */
 
@@ -232,6 +235,30 @@ const FASES = [
     compararCom: OU(P, Q),
     variaveis: ['P', 'Q'],
     criterioEstrelas: { tres: 4, dois: 6 },
+  },
+  {
+    id: '3-5', etapa: 3,
+    titulo: 'Condição aninhada',
+    dica: 'Avalie a conjunção interna, depois a disjunção e por fim a condicional.',
+    formula: IMPLICA(E(P, Q), OU(R, NAO(P))),
+    variaveis: ['P', 'Q', 'R'],
+    criterioEstrelas: { tres: 8, dois: 10 },
+  },
+  {
+    id: '3-6', etapa: 3,
+    titulo: 'Dois espelhos',
+    dica: 'Compare P ↔ Q com a condicional R → ¬S; decida a saída final com a conjunção.',
+    formula: E(SSE(P, Q), IMPLICA(R, NAO(S))),
+    variaveis: ['P', 'Q', 'R', 'S'],
+    criterioEstrelas: { tres: 16, dois: 18 },
+  },
+  {
+    id: '3-7', etapa: 3, desempate: true,
+    titulo: 'Desempate da usina',
+    dica: 'Resolva cada linha com atenção: há três conectivos diferentes e quatro variáveis.',
+    formula: OU(IMPLICA(P, E(Q, R)), SSE(NAO(S), Q)),
+    variaveis: ['P', 'Q', 'R', 'S'],
+    criterioEstrelas: { tres: 16, dois: 18 },
   },
 ];
 

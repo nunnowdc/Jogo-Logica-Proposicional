@@ -38,6 +38,19 @@
       </form>
       <ol id="lista-ranking" class="lista-ranking"></ol>
     </section>
+    <section class="multiplayer-setup" aria-labelledby="multiplayer-titulo">
+      <div>
+        <h2 id="multiplayer-titulo">Partida local · 2 jogadores</h2>
+        <p>Sorteie 3 fases para cada jogador. Revezem após cada fase; vence o menor tempo total. Se empatar, valem as tentativas e depois uma fase extra.</p>
+      </div>
+      <form id="form-multiplayer" class="form-multiplayer">
+        <label for="multiplayer-jogador1">Jogador 1</label>
+        <input id="multiplayer-jogador1" maxlength="24" autocomplete="off" value="Jogador 1" required>
+        <label for="multiplayer-jogador2">Jogador 2</label>
+        <input id="multiplayer-jogador2" maxlength="24" autocomplete="off" value="Jogador 2" required>
+        <button class="btn btn-primario" type="submit">Sortear fases e jogar</button>
+      </form>
+    </section>
     <footer class="menu-rodape">
       <button id="btn-como-jogar" class="btn">Como jogar</button>
       <button id="btn-reset" class="btn btn-fantasma">Apagar progresso</button>
@@ -47,6 +60,7 @@
 
   <!-- ============ TELA 2: JOGO ============ -->
   <section id="tela-jogo" class="tela">
+    <div id="match-status" class="match-status" hidden></div>
     <header class="hud">
       <div class="hud-info">
         <span id="hud-etapa" class="hud-etapa"></span>

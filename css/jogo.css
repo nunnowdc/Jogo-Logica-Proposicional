@@ -17,6 +17,8 @@
 .hud-tempo.alerta { color: var(--vermelho); }
 .hud-estrelas { color: var(--ambar); font-size: 20px; letter-spacing: 3px; }
 .hud-botoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.match-status { margin-bottom: 12px; padding: 10px 14px; border: 1px solid var(--azul); border-radius: 10px; background: rgba(var(--azul-rgb), .08); color: var(--texto); font-family: var(--mono); }
+.match-status[hidden] { display: none; }
 
 .dica {
   margin: 14px 0 4px; padding: 10px 14px; color: var(--texto2);
@@ -206,4 +208,5 @@
   .porta { width: 80px; height: 110px; }
   .desafio-layout { grid-template-columns: 1fr; }
   .hud-status { gap: 10px; flex-wrap: wrap; }
+  .form-multiplayer button { margin-left: 0; width: 100%; }
 }

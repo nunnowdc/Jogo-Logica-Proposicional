@@ -34,6 +34,13 @@
 .cartao-fase:disabled { opacity: .4; cursor: not-allowed; }
 .menu-rodape { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .total-estrelas { margin-left: auto; color: var(--ambar); font-family: var(--mono); }
+.multiplayer-setup { margin: 0 0 24px; padding: 16px; background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; }
+.multiplayer-setup h2 { margin: 0 0 4px; font-size: 20px; }
+.multiplayer-setup p { margin: 0 0 12px; color: var(--texto2); }
+.form-multiplayer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.form-multiplayer label { color: var(--texto2); }
+.form-multiplayer input { width: 150px; padding: 8px 10px; border: 1px solid var(--borda-forte); border-radius: 8px; background: var(--painel2); color: var(--texto); font: inherit; }
+.form-multiplayer button { margin-left: auto; }
 
 /* ---------- Tela final ---------- */
 .final { text-align: center; padding-top: 50px; }
