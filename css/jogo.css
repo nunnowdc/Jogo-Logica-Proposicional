@@ -136,30 +136,21 @@
 .extra:empty { display: none; }
 .extra { margin-top: 14px; background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; padding: 14px; overflow-x: auto; }
 .extra h4 { margin: 0 0 8px; font-size: 15px; }
-/* ---------- Etapa 3: puzzle de equivalência ---------- */
-.legenda-desafio { color: var(--texto2); font-size: 13px; margin: 0 0 12px; }
-.opcoes-equiv { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
-.opcao-equiv {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left;
-  padding: 12px 14px; border: 2px solid var(--borda-forte); border-radius: 10px;
-  background: var(--painel2); color: var(--texto); cursor: pointer;
-  transition: border-color .15s, transform .15s, box-shadow .15s;
+/* ---------- Etapa 3: circuito gêmeo ---------- */
+.legenda-desafio { color: var(--texto2); font-size: 13px; margin: 10px 0 0; }
+.linha-gemeo { border-color: var(--azul); }
+.sincronia { display: flex; flex-wrap: wrap; gap: 8px; }
+.luz-sync {
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px;
+  border: 1px solid var(--borda-forte); border-radius: 999px; background: var(--painel2);
+  color: var(--texto2); font: 12px var(--mono); cursor: pointer;
 }
-.opcao-equiv:hover:not(:disabled) { border-color: var(--azul); transform: translateY(-2px); }
-.opcao-equiv:disabled { cursor: default; }
-.opcao-letra { font: 700 12px var(--mono); color: var(--texto2); }
-.opcao-formula { font: 700 19px var(--mono); color: var(--ambar); overflow-wrap: anywhere; }
-.opcao-estado { font-size: 12px; color: var(--azul); text-transform: uppercase; letter-spacing: 1px; }
-.opcao-equiv.certa { border-color: var(--verde); box-shadow: 0 0 10px rgba(var(--verde-rgb), .28); }
-.opcao-equiv.certa .opcao-estado { color: var(--verde); }
-.opcao-equiv.errada { border-color: var(--vermelho-esc); opacity: .65; }
-.opcao-equiv.errada .opcao-estado { color: var(--vermelho); }
-.opcao-equiv.errada.ultima { opacity: 1; border-color: var(--vermelho); animation: tremer .4s; }
-.feedback-equiv { margin-top: 14px; padding: 12px 14px; border-left: 3px solid var(--verde); background: rgba(var(--verde-rgb), .06); }
-.feedback-equiv.erro { border-left-color: var(--vermelho); background: rgba(var(--vermelho-rgb), .07); }
-.feedback-equiv p { margin: 0 0 10px; }
-.feedback-equiv .tabela { width: auto; }
-.feedback-equiv .tabela th, .feedback-equiv .tabela td { padding: 6px 12px; }
+.luz-ponto { width: 12px; height: 12px; border-radius: 50%; background: var(--lampada-apagada); border: 1px solid var(--borda-forte); }
+.luz-sync.ok .luz-ponto { background: var(--verde); border-color: var(--verde); box-shadow: 0 0 8px var(--verde); }
+.luz-sync.falha .luz-ponto { background: var(--vermelho); border-color: var(--vermelho); box-shadow: 0 0 8px var(--vermelho); }
+.luz-sync.falha { color: var(--vermelho); }
+.luz-sync.atual { border-color: var(--ambar); color: var(--texto); }
+.luz-sync:hover { border-color: var(--azul); }
 .ranking-sala { margin: 0 0 24px; padding: 16px; background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; }
 .ranking-sala h2 { margin: 0 0 4px; font-size: 20px; }
 .ranking-sala p { color: var(--texto2); margin: 0 0 12px; }

@@ -239,13 +239,6 @@ function contraexemplo(f1, f2, vars) {
   return todasValoracoes(vars).find(val => avaliar(f1, val) !== avaliar(f2, val)) || null;
 }
 
-/* Etapa 3: índices das opções equivalentes ao circuito original. */
-function opcoesEquivalentes(fase) {
-  return fase.opcoes
-    .map((op, i) => (equivalentes(fase.formula, op, fase.variaveis) ? i : -1))
-    .filter(i => i >= 0);
-}
-
 /* ---------------------------------------------------------------------
    6. Regras de vitória (usadas pelo jogo E pelo verificador)
    --------------------------------------------------------------------- */
@@ -299,8 +292,8 @@ function calcularEstrelas(fase, jogadas, usouTabela) {
        → acha o MENOR número de cliques até acender tudo.
      • Etapa 2: testa TODAS as formas de colocar as peças disponíveis
        nos encaixes → conta soluções e acha o menor número de peças.
-     • Etapa 3: compara a tabela-verdade de cada opção com a do original
-       → confere que há substitutos equivalentes e opções erradas.
+     • Etapa 3: igual à Etapa 2, exigindo que o gêmeo seja EQUIVALENTE
+       ao circuito original (mesma tabela-verdade).
    --------------------------------------------------------------------- */
 function textoValoracao(val) {
   return Object.keys(val).map(k => k + '=' + (val[k] ? 'V' : 'F')).join(' ');
@@ -388,50 +381,12 @@ function verificarEtapa2(fase) {
   };
 }
 
-/* Etapa 3: o original e as opções usam só as variáveis da fase, existe
-   pelo menos um substituto equivalente e pelo menos uma "pegadinha".   */
-function verificarEtapa3(fase) {
-  const problemas = [];
-  const opcoes = fase.opcoes || [];
-
-  if (new Set(fase.variaveis).size !== fase.variaveis.length) problemas.push('há variáveis repetidas');
-  [fase.formula, ...opcoes].forEach(f => {
-    if (variaveisDe(f).some(v => !fase.variaveis.includes(v))) {
-      problemas.push(`${formulaParaTexto(f)} usa variável ausente da lista`);
-    }
-  });
-  if (opcoes.length < 2) problemas.push('a fase precisa de pelo menos duas opções');
-  const textos = opcoes.map(f => formulaParaTexto(f));
-  if (new Set(textos).size !== textos.length) problemas.push('há opções repetidas');
-  if (textos.includes(formulaParaTexto(fase.formula))) problemas.push('uma opção é idêntica ao original');
-
-  const certas = problemas.length ? [] : opcoesEquivalentes(fase);
-  if (!problemas.length) {
-    if (certas.length === 0) problemas.push('nenhuma opção é equivalente ao original');
-    if (certas.length === opcoes.length) problemas.push('todas as opções são equivalentes');
-    if (fase.criterioEstrelas.tres !== certas.length) {
-      problemas.push(`criterioEstrelas.tres deveria ser ${certas.length}`);
-    }
-  }
-  if (fase.criterioEstrelas.dois < fase.criterioEstrelas.tres) {
-    problemas.push('criterioEstrelas.dois não pode ser menor que criterioEstrelas.tres');
-  }
-
-  return {
-    fase: fase.id, ok: problemas.length === 0,
-    minimo: certas.length, limite: 'escolhas', solucoes: certas.length,
-    exemplo: certas.map(i => textos[i]).join('  |  ') || '-',
-    problema: problemas.join('; ') || '-',
-  };
-}
-
 /* Roda a verificação de todas as fases e mostra o relatório no console. */
 function verificarFases(fases) {
   const relatorio = fases.map(f => {
     try {
       if (f.etapa === 1) return verificarEtapa1(f);
-      if (f.etapa === 2) return verificarEtapa2(f);
-      return verificarEtapa3(f);
+      return verificarEtapa2(f);   // Etapas 2 e 3 usam encaixes e peças
     }
     catch (e) { return { fase: f.id, ok: false, minimo: '-', limite: '-', solucoes: 0, exemplo: '-', problema: e.message }; }
   });
@@ -450,7 +405,7 @@ if (typeof module !== 'undefined') {
   module.exports = {
     OPS, CONECTIVOS_BINARIOS, V, NAO, E, OU, IMPLICA, SSE, SLOT_BIN, SLOT_NEG, SLOT_VAR,
     avaliar, avaliarParcial, preencher, listarSlots, formulaParaTexto, variaveisDe,
-    gerarTabelaVerdade, equivalentes, contraexemplo, opcoesEquivalentes, lampadasDe, lampadasAcesas, configsDe,
+    gerarTabelaVerdade, equivalentes, contraexemplo, lampadasDe, lampadasAcesas, configsDe,
     objetivoAtingido, pecaCabe, calcularEstrelas, verificarFases, textoValoracao,
   };
 }

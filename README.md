@@ -33,13 +33,20 @@ Os interruptores ficam travados e o jogador **monta o circuito**, arrastando con
 - Encaixes de negação (¬) são opcionais.
 - Desafios avançados: fazer o mesmo circuito funcionar em duas salas com valores diferentes, e construir um circuito **equivalente** a `P → Q` usando só `∨` e `¬`, válido em todas as linhas da tabela-verdade.
 
-### Etapa 3 · Equivalência lógica
-Um circuito queimou e precisa ser trocado. O jogador recebe o **circuito original** e quatro candidatos, e deve escolher os que são **equivalentes** (≡), ou seja, que dão o mesmo valor em todas as linhas da tabela-verdade.
+### Etapa 3 · Circuito gêmeo (equivalência lógica)
+Junta as mecânicas das duas primeiras etapas. A tela mostra um **circuito original**, já montado, e um **circuito gêmeo** com encaixes vazios e formato diferente.
 
-- Ao acertar, o jogo mostra a tabela-verdade completa provando a equivalência.
-- Ao errar, o jogo mostra um **contraexemplo**: uma combinação de valores em que os dois circuitos discordam.
-- Algumas fases têm dois substitutos válidos, e a porta só abre quando o jogador encontra os dois.
-- Leis trabalhadas: dupla negação, comutatividade, De Morgan (∧ e ∨), condicional como `¬P ∨ Q` e contrapositiva (e por que a recíproca e a inversa **não** servem), bicondicional sem `↔` e distributividade.
+- **Montar (como na Etapa 2):** o jogador encaixa peças da bandeja no gêmeo.
+- **Testar (como na Etapa 1):** os interruptores ficam livres e não contam jogada. O jogador compara as duas lâmpadas lado a lado.
+- **Luzes de sincronia:** há uma luz por combinação dos interruptores. Ela fica verde quando as lâmpadas concordam e vermelha quando discordam, e a vermelha mostra um **contraexemplo**. Tocar numa luz leva os interruptores para aquela combinação.
+- **Objetivo:** a porta abre quando todas as luzes ficam verdes, ou seja, quando o gêmeo é **equivalente** ao original (mesma tabela-verdade).
+- **Leis:** o formato do gêmeo obriga o jogador a usá-las.
+  - De Morgan: ¬(P ∧ Q) vira ¬P ∨ ¬Q.
+  - Contrapositiva: P → Q vira ¬Q → ¬P.
+  - Negação da condicional: ¬(P → Q) vira P ∧ ¬Q.
+  - Bicondicional: P ↔ Q vira (P → Q) ∧ (Q → P).
+  - Distributividade e dupla negação também aparecem.
+- **Pontuação:** menos peças rendem mais estrelas.
 
 ### Multiplayer local
 No menu, informe os nomes de dois jogadores para iniciar uma partida no mesmo dispositivo. Os dois recebem as **mesmas três fases** sorteadas, uma de cada etapa, e os turnos alternam após cada fase concluída. Cada jogador tem 120 segundos por tentativa, e apenas o tempo do turno ativo soma ao total.
@@ -67,10 +74,10 @@ Menos jogadas, menos peças ou menos tentativas rendem mais estrelas (até ★�
 | Bicondicional `↔` | Portas "espelho", que exigem valores iguais |
 | Valoração / satisfatibilidade | Encontrar valores que tornam a fórmula V |
 | Satisfação simultânea | Várias lâmpadas ou várias salas ao mesmo tempo |
-| Equivalência lógica | Etapa 3 inteira e a fase "Peça de reposição" (`P → Q` com `∨` e `¬`) |
-| Contraexemplo | Feedback de cada escolha errada na Etapa 3 |
-| Leis de equivalência | De Morgan, dupla negação, contrapositiva, comutatividade, distributividade |
-| Tabela-verdade | Consulta dentro do jogo (com custo) e prova das equivalências |
+| Equivalência lógica | Etapa 3 inteira (circuito gêmeo) e a fase "Peça de reposição" (`P → Q` com `∨` e `¬`) |
+| Contraexemplo | Luz vermelha de sincronia na Etapa 3: a combinação em que gêmeo e original discordam |
+| Leis de equivalência | Etapa 3: De Morgan, dupla negação, contrapositiva, negação da condicional, bicondicional, distributividade |
+| Tabela-verdade | Consulta dentro do jogo (com custo) e luzes de sincronia da Etapa 3 |
 
 ## Estrutura
 
