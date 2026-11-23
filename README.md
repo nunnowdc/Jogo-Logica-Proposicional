@@ -33,14 +33,13 @@ Os interruptores ficam travados e o jogador **monta o circuito**, arrastando con
 - Encaixes de negação (¬) são opcionais.
 - Desafios avançados: fazer o mesmo circuito funcionar em duas salas com valores diferentes, e construir um circuito **equivalente** a `P → Q` usando só `∨` e `¬`, válido em todas as linhas da tabela-verdade.
 
-### Etapa 3 · Fios da tabela-verdade
-O jogador avalia uma expressão para cada combinação de valores e conecta a saída do circuito ao terminal **V** ou **F** correspondente.
+### Etapa 3 · Equivalência lógica
+Um circuito queimou e precisa ser trocado. O jogador recebe o **circuito original** e quatro candidatos, e deve escolher os que são **equivalentes** (≡), ou seja, que dão o mesmo valor em todas as linhas da tabela-verdade.
 
-- A tabela-verdade é preenchida à medida que cada linha é resolvida.
-- Uma conexão incorreta permite tentar novamente, mas conta como tentativa e pode reduzir as estrelas.
-- A dificuldade cresce de duas para quatro variáveis, com expressões cada vez mais complexas.
-- A fase “Prova por contraexemplo” compara `P → Q` e `P ∨ Q`.
-- As três fases adicionais exploram condicional, bicondicional e fórmulas com quatro variáveis.
+- Ao acertar, o jogo mostra a tabela-verdade completa provando a equivalência.
+- Ao errar, o jogo mostra um **contraexemplo**: uma combinação de valores em que os dois circuitos discordam.
+- Algumas fases têm dois substitutos válidos, e a porta só abre quando o jogador encontra os dois.
+- Leis trabalhadas: dupla negação, comutatividade, De Morgan (∧ e ∨), condicional como `¬P ∨ Q` e contrapositiva (e por que a recíproca e a inversa **não** servem), bicondicional sem `↔` e distributividade.
 
 ### Multiplayer local
 No menu, informe os nomes de dois jogadores para iniciar uma partida no mesmo dispositivo. Cada participante recebe três fases sorteadas; os turnos alternam após cada fase concluída. Cada jogador tem 120 segundos por tentativa, e apenas o tempo do turno ativo soma ao total. Vence o menor tempo total; em empate, contam menos tentativas e, persistindo a igualdade, ambos resolvem a fase extra de desempate.
@@ -49,7 +48,7 @@ No menu, informe os nomes de dois jogadores para iniciar uma partida no mesmo di
 Cada fase tem limite de **120 segundos**. Ao zerar, a tentativa termina e é possível recomeçar. O ranking da sala é local ao navegador: registre um nome e acumule estrelas ao concluir fases. Para compartilhar o ranking entre dispositivos seria necessário um servidor, que este projeto não possui.
 
 ### Pontuação
-Menos jogadas ou menos peças rendem mais estrelas (até ★★★ por fase). Consultar a tabela-verdade custa uma estrela.
+Menos jogadas, menos peças ou menos tentativas rendem mais estrelas (até ★★★ por fase). Consultar a tabela-verdade custa uma estrela.
 
 ## Lógica proposicional no jogo
 
@@ -62,8 +61,10 @@ Menos jogadas ou menos peças rendem mais estrelas (até ★★★ por fase). Co
 | Bicondicional `↔` | Portas "espelho", que exigem valores iguais |
 | Valoração / satisfatibilidade | Encontrar valores que tornam a fórmula V |
 | Satisfação simultânea | Várias lâmpadas ou várias salas ao mesmo tempo |
-| Equivalência lógica | Substituir `P → Q` por `¬P ∨ Q` |
-| Tabela-verdade | Consulta dentro do jogo (com custo) |
+| Equivalência lógica | Etapa 3 inteira e a fase "Peça de reposição" (`P → Q` com `∨` e `¬`) |
+| Contraexemplo | Feedback de cada escolha errada na Etapa 3 |
+| Leis de equivalência | De Morgan, dupla negação, contrapositiva, comutatividade, distributividade |
+| Tabela-verdade | Consulta dentro do jogo (com custo) e prova das equivalências |
 
 ## Estrutura
 

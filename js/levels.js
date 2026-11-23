@@ -7,12 +7,14 @@
 
    Campos:
      id               texto único, ex.: '1-3'
-     etapa            1 = interruptores · 2 = construção · 3 = tabela-verdade
+     etapa            1 = interruptores · 2 = construção · 3 = equivalência
      titulo, dica     textos mostrados na tela
      formula          Etapa 1: fórmula (ou lista de fórmulas = várias lâmpadas)
                       Etapa 2: fórmula com encaixes SLOT_BIN / SLOT_NEG / SLOT_VAR
-                      Etapa 3: expressão avaliada linha por linha
-     compararCom      Etapa 3: segunda expressão para desafio de equivalência
+                      Etapa 3: circuito original, que precisa de um substituto
+     opcoes           Etapa 3: circuitos candidatos (pelo menos um equivalente e
+                      um não equivalente). O jogador precisa achar TODOS os
+                      equivalentes; os errados mostram um contraexemplo.
      desempate        Etapa 3: fase extra usada quando a partida local empata
      variaveis        lista das variáveis, ex.: ['P', 'Q']
      estadoInicial    valores dos interruptores, ex.: { P: true, Q: false }
@@ -22,7 +24,8 @@
      pecasDisponiveis Etapa 2: { AND: 1, OR: 1, NOT: 2, P: 1, ... } · Etapa 1: null
      maxJogadas       Etapa 1: limite de cliques · Etapa 2: null (sem limite)
      criterioEstrelas { tres: X, dois: Y } — jogadas (Etapa 1), peças
-                      colocadas (Etapa 2) ou linhas corretas (Etapa 3)
+                      colocadas (Etapa 2) ou escolhas feitas (Etapa 3:
+                      tres = número de opções equivalentes)
      alvoEquivalente  (opcional) fórmula que a montagem deve imitar
    ===================================================================== */
 
@@ -202,63 +205,69 @@ const FASES = [
     criterioEstrelas: { tres: 2, dois: 4 },
   },
 
-  /* ===================== ETAPA 3 — FIOS DA TABELA-VERDADE ===================== */
+  /* ===================== ETAPA 3 — EQUIVALÊNCIA LÓGICA ===================== */
   {
     id: '3-1', etapa: 3,
-    titulo: 'Saída lógica',
-    dica: 'Resolva cada combinação da tabela e conecte a saída da expressão ao valor correto.',
-    formula: IMPLICA(P, Q),
-    variaveis: ['P', 'Q'],
-    criterioEstrelas: { tres: 4, dois: 6 },
+    titulo: 'Dupla negação',
+    dica: 'Negar duas vezes desfaz a negação. Qual circuito sempre dá o mesmo valor que ¬¬P?',
+    formula: NAO(NAO(P)),
+    opcoes: [NAO(P), P, OU(P, NAO(P)), E(P, NAO(P))],
+    variaveis: ['P'],
+    criterioEstrelas: { tres: 1, dois: 2 },
   },
   {
     id: '3-2', etapa: 3,
-    titulo: 'Circuito em série',
-    dica: 'Avalie primeiro a disjunção e a negação; depois confira a conjunção em cada linha.',
-    formula: E(OU(P, NAO(Q)), R),
-    variaveis: ['P', 'Q', 'R'],
-    criterioEstrelas: { tres: 8, dois: 10 },
+    titulo: 'Ordem dos fios',
+    dica: 'Na conjunção, a ordem dos lados não muda o resultado (comutatividade).',
+    formula: E(P, Q),
+    opcoes: [OU(P, Q), E(Q, P), IMPLICA(P, Q), E(NAO(P), Q)],
+    variaveis: ['P', 'Q'],
+    criterioEstrelas: { tres: 1, dois: 2 },
   },
   {
     id: '3-3', etapa: 3,
-    titulo: 'Núcleo de quatro variáveis',
-    dica: 'O bicondicional compara duas subfórmulas. Calcule os dois lados antes de decidir se são iguais.',
-    formula: SSE(IMPLICA(P, Q), OU(R, NAO(S))),
-    variaveis: ['P', 'Q', 'R', 'S'],
-    criterioEstrelas: { tres: 16, dois: 18 },
+    titulo: 'Lei de De Morgan',
+    dica: 'Negar um ∧ vira um ∨ das negações. Há DOIS substitutos válidos: encontre os dois.',
+    formula: NAO(E(P, Q)),
+    opcoes: [E(NAO(P), NAO(Q)), OU(NAO(P), NAO(Q)), OU(NAO(P), Q), IMPLICA(P, NAO(Q))],
+    variaveis: ['P', 'Q'],
+    criterioEstrelas: { tres: 2, dois: 3 },
   },
   {
     id: '3-4', etapa: 3,
-    titulo: 'Prova por contraexemplo',
-    dica: 'Compare P → Q com P ∨ Q. Conecte V quando os resultados coincidirem e F quando forem diferentes.',
-    formula: IMPLICA(P, Q),
-    compararCom: OU(P, Q),
+    titulo: 'De Morgan ao contrário',
+    dica: 'Negar um ∨ vira um ∧ das negações: nenhum dos dois pode ser V.',
+    formula: NAO(OU(P, Q)),
+    opcoes: [OU(NAO(P), NAO(Q)), E(NAO(P), Q), E(NAO(P), NAO(Q)), NAO(E(P, Q))],
     variaveis: ['P', 'Q'],
-    criterioEstrelas: { tres: 4, dois: 6 },
+    criterioEstrelas: { tres: 1, dois: 2 },
   },
   {
     id: '3-5', etapa: 3,
-    titulo: 'Condição aninhada',
-    dica: 'Avalie a conjunção interna, depois a disjunção e por fim a condicional.',
-    formula: IMPLICA(E(P, Q), OU(R, NAO(P))),
-    variaveis: ['P', 'Q', 'R'],
-    criterioEstrelas: { tres: 8, dois: 10 },
+    titulo: 'Condicional disfarçada',
+    dica: 'P → Q só é F quando P é V e Q é F. A recíproca e a inversa NÃO servem; há dois substitutos válidos.',
+    formula: IMPLICA(P, Q),
+    opcoes: [IMPLICA(Q, P), OU(NAO(P), Q), IMPLICA(NAO(P), NAO(Q)), IMPLICA(NAO(Q), NAO(P))],
+    variaveis: ['P', 'Q'],
+    criterioEstrelas: { tres: 2, dois: 3 },
   },
   {
     id: '3-6', etapa: 3,
-    titulo: 'Dois espelhos',
-    dica: 'Compare P ↔ Q com a condicional R → ¬S; decida a saída final com a conjunção.',
-    formula: E(SSE(P, Q), IMPLICA(R, NAO(S))),
-    variaveis: ['P', 'Q', 'R', 'S'],
-    criterioEstrelas: { tres: 16, dois: 18 },
+    titulo: 'Espelho desmontado',
+    dica: 'P ↔ Q é V quando os valores são iguais. Há dois jeitos de montá-lo sem usar ↔.',
+    formula: SSE(P, Q),
+    opcoes: [E(IMPLICA(P, Q), IMPLICA(Q, P)), OU(IMPLICA(P, Q), IMPLICA(Q, P)), SSE(NAO(P), Q), OU(E(P, Q), E(NAO(P), NAO(Q)))],
+    variaveis: ['P', 'Q'],
+    criterioEstrelas: { tres: 2, dois: 3 },
   },
   {
     id: '3-7', etapa: 3, desempate: true,
-    titulo: 'Desempate da usina',
-    dica: 'Resolva cada linha com atenção: há três conectivos diferentes e quatro variáveis.',
-    formula: OU(IMPLICA(P, E(Q, R)), SSE(NAO(S), Q)),
-    variaveis: ['P', 'Q', 'R', 'S'],
-    criterioEstrelas: { tres: 16, dois: 18 },
+    titulo: 'Distribuição de carga',
+    dica: 'O ∧ se distribui sobre o ∨: P ∧ (Q ∨ R) é o mesmo que aplicar P a cada lado.',
+    formula: E(P, OU(Q, R)),
+    opcoes: [OU(E(P, Q), R), OU(E(P, Q), E(P, R)), E(OU(P, Q), OU(P, R)), OU(P, E(Q, R))],
+    variaveis: ['P', 'Q', 'R'],
+    criterioEstrelas: { tres: 1, dois: 2 },
   },
 ];
 

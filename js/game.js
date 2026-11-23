@@ -42,14 +42,14 @@ const INTRO_ETAPAS = {
     ],
   },
   3: {
-    titulo: 'Etapa 3 · Fios da tabela-verdade',
-    resumo: 'Calcule a saída da expressão para cada linha e conecte o fio ao valor lógico correto.',
+    titulo: 'Etapa 3 · Equivalência lógica',
+    resumo: 'Um circuito queimou. Escolha os substitutos que dão o MESMO resultado em todas as combinações.',
     itens: [
-      'A tabela mostra as combinações possíveis das variáveis. A coluna de saída é preenchida conforme você resolve cada linha.',
-      'Leia os valores V/F da combinação atual e avalie a expressão usando as regras dos conectivos.',
-      'Conecte a saída ao terminal V ou F. Uma conexão incorreta conta como tentativa, mas você pode tentar novamente.',
-      'Resolva todas as linhas para abrir a porta. A última fase compara fórmulas e pede um contraexemplo de equivalência.',
-      'Conexões corretas sem erros rendem mais estrelas.',
+      'Duas fórmulas são <b>equivalentes</b> (≡) quando têm a mesma tabela-verdade: o mesmo valor em TODAS as linhas.',
+      'Toque num circuito candidato para instalá-lo. Se ele for equivalente ao original, fica verde.',
+      'Se não for, o jogo mostra um <b>contraexemplo</b>: uma combinação de valores em que os dois circuitos discordam.',
+      'Algumas fases têm mais de um substituto válido: a porta só abre quando você encontrar todos.',
+      'Cada escolha conta como tentativa. Sem erros, você ganha 3 estrelas; consultar a tabela-verdade custa 1 estrela.',
     ],
   },
 };
@@ -119,8 +119,11 @@ function escaparHTML(texto) {
   })[caractere]);
 }
 
+/* A primeira fase de cada etapa fica sempre liberada (dá para começar
+   por qualquer etapa); dentro da etapa, cada fase libera a seguinte. */
 function faseDesbloqueada(i) {
-  return i === 0 || (progresso.estrelas[FASES[i - 1].id] || 0) > 0;
+  const primeiraDaEtapa = i === 0 || FASES[i - 1].etapa !== FASES[i].etapa;
+  return primeiraDaEtapa || (progresso.estrelas[FASES[i - 1].id] || 0) > 0;
 }
 
 function formatarTempo(segundos) {
@@ -216,9 +219,8 @@ function criarEstadoFase(i) {
     usouTabela: false,
     fim: false,
     venceu: false,
-    linhaDesafio: 0,
-    respostas: {},
-    feedback: '',
+    testadas: {},      // Etapa 3: índice da opção → { equivalente, contra }
+    ultimaOpcao: null, // Etapa 3: última opção escolhida (para o feedback)
     tempoRestante: TEMPO_POR_FASE,
     tempoFim: null,
     cronometro: null,
@@ -407,6 +409,7 @@ function abrirFase(i) {
   renderFase();
 
   // Mostra a introdução da etapa na primeira vez que o jogador chega nela
+  const f = jogo.fase;
   const primeiraDaEtapa = FASES.findIndex(x => x.etapa === f.etapa) === i;
   if (primeiraDaEtapa && !progresso.introVista[f.etapa]) {
     progresso.introVista[f.etapa] = true;
@@ -425,10 +428,8 @@ function abrirFase(i) {
 function linhasDaFase() {
   const f = jogo.fase;
   if (f.etapa === 3) {
-    const linhas = gerarTabelaVerdade(f.formula, f.variaveis);
-    const indice = Math.min(jogo.linhaDesafio, linhas.length - 1);
-    return [{ formula: f.formula, val: linhas[indice].valoracao,
-              rotulo: `Desafio ${indice + 1} de ${linhas.length}`, mostrarConfig: true }];
+    return [{ formula: f.formula, val: null,
+              rotulo: jogo.venceu ? 'Circuito original: substituto instalado' : 'Circuito original (queimado): precisa de um substituto equivalente' }];
   }
   if (f.etapa === 1) {
     const lamps = lampadasDe(f);
@@ -452,7 +453,7 @@ function linhasDaFase() {
 /* A lâmpada de uma linha está acesa? (usa o avaliador do logic.js) */
 function lampadaAcesa(linha) {
   const f = jogo.fase;
-  if (f.etapa === 3) return false;
+  if (f.etapa === 3) return jogo.venceu;
   if (f.etapa === 1) return avaliar(linha.formula, linha.val);
   const concreta = preencher(f.formula, jogo.preench);
   if (!concreta) return false;
@@ -491,19 +492,19 @@ function renderHUD() {
     hj.textContent = `Peças colocadas: ${jogo.jogadas}`;
     hj.classList.remove('alerta');
   } else {
-    const total = gerarTabelaVerdade(f.formula, f.variaveis).length;
-    hj.textContent = `Linhas resolvidas: ${jogo.linhaDesafio} / ${total} · Tentativas: ${jogo.jogadas}`;
+    const total = opcoesEquivalentes(f).length;
+    const achadas = Object.values(jogo.testadas).filter(t => t.equivalente).length;
+    hj.textContent = `Equivalentes: ${achadas} / ${total} · Tentativas: ${jogo.jogadas}`;
     hj.classList.remove('alerta');
   }
   $('#hud-estrelas').textContent = estrelasTexto(calcularEstrelas(f, jogo.jogadas, jogo.usouTabela));
-  $('#btn-tabela').hidden = f.etapa === 3;
+  $('#btn-tabela').hidden = !!partidaLocal;   // na partida local, sem consultas
   const tempo = $('#hud-tempo');
   tempo.textContent = `Tempo: ${formatarTempo(jogo.tempoRestante)}`;
   tempo.classList.toggle('alerta', jogo.tempoRestante <= 30);
 
   // Fórmula em texto, acima do circuito
   const ft = $('#formula-texto');
-  ft.hidden = f.etapa === 3;
   if (f.etapa === 1) {
     ft.innerHTML = '';
     lampadasDe(f).forEach((form, k, arr) => {
@@ -511,7 +512,7 @@ function renderHUD() {
       ft.appendChild(document.createTextNode(formulaParaTexto(form) + (k < arr.length - 1 ? '   ' : '')));
     });
   } else {
-    ft.innerHTML = '<span>Fórmula:</span>';
+    ft.innerHTML = f.etapa === 3 ? '<span>Original:</span>' : '<span>Fórmula:</span>';
     ft.appendChild(document.createTextNode(formulaParaTexto(f.formula, jogo.preench)));
   }
 }
@@ -681,7 +682,7 @@ function renderExtra() {
   extra.innerHTML = '';
   const f = jogo.fase;
   if (f.etapa === 3) {
-    renderDesafioTabela(extra);
+    renderPuzzleEquivalencia(extra);
     return;
   }
   if (!f.alvoEquivalente) return;
@@ -713,93 +714,75 @@ function renderExtra() {
   extra.appendChild(t);
 }
 
-function renderDesafioTabela(extra) {
+/* Etapa 3: circuito original + cartões com os candidatos a substituto */
+function renderPuzzleEquivalencia(extra) {
   const f = jogo.fase;
-  const linhas = gerarTabelaVerdade(f.formula, f.variaveis);
-  const comparar = !!f.compararCom;
-  const indiceAtual = Math.min(jogo.linhaDesafio, linhas.length - 1);
-  const layout = el('div', 'desafio-layout');
-  const painelExpressao = el('section', 'expressao-desafio-painel');
-  painelExpressao.appendChild(el('h4', null, comparar ? 'Expressões para comparar' : 'Expressão lógica'));
-  if (comparar) {
-    const expressao = el('div', 'expressoes-comparadas');
-    [['A', f.formula], ['B', f.compararCom]].forEach(([rotulo, formula]) => {
-      const bloco = el('p');
-      bloco.appendChild(el('span', 'expressao-label', `${rotulo}:`));
-      bloco.appendChild(el('span', 'expressao-desafio', formulaParaTexto(formula)));
-      expressao.appendChild(bloco);
-    });
-    painelExpressao.appendChild(expressao);
-    painelExpressao.appendChild(el('p', 'equivalencia-final', 'Fórmulas equivalentes têm resultados iguais em todas as linhas.'));
-  } else {
-    painelExpressao.appendChild(el('p', 'expressao-desafio', formulaParaTexto(f.formula)));
+  const certas = opcoesEquivalentes(f);
+  const original = formulaParaTexto(f.formula);
+
+  extra.appendChild(el('h4', null, certas.length > 1
+    ? `Encontre os ${certas.length} circuitos equivalentes a ${original}`
+    : `Qual circuito é equivalente a ${original}?`));
+  extra.appendChild(el('p', 'legenda-desafio',
+    'Equivalente (≡) = mesmo valor em TODAS as linhas da tabela-verdade. Toque num candidato para instalá-lo.'));
+
+  const grade = el('div', 'opcoes-equiv');
+  f.opcoes.forEach((op, i) => {
+    const t = jogo.testadas[i];
+    const estado = t ? (t.equivalente ? ' certa' : ' errada') : '';
+    const b = el('button', 'opcao-equiv' + estado + (jogo.ultimaOpcao === i ? ' ultima' : ''));
+    b.type = 'button';
+    b.appendChild(el('span', 'opcao-letra', 'ABCDEF'[i]));
+    b.appendChild(el('span', 'opcao-formula', formulaParaTexto(op)));
+    b.appendChild(el('span', 'opcao-estado',
+      t ? (t.equivalente ? '≡ equivalente' : '≢ não equivalente') : 'Instalar'));
+    b.disabled = jogo.fim || !!t;
+    b.setAttribute('aria-label', `Opção ${'ABCDEF'[i]}: ${formulaParaTexto(op)}` +
+      (t ? (t.equivalente ? ', equivalente' : ', não equivalente') : ''));
+    b.onclick = () => escolherOpcao(i);
+    grade.appendChild(b);
+  });
+  extra.appendChild(grade);
+
+  // Feedback da última escolha: prova (tabela inteira) ou contraexemplo (uma linha)
+  if (jogo.ultimaOpcao !== null) {
+    const i = jogo.ultimaOpcao;
+    const t = jogo.testadas[i];
+    const op = f.opcoes[i];
+    const texto = formulaParaTexto(op);
+    const fb = el('div', 'feedback-equiv' + (t.equivalente ? '' : ' erro'));
+    if (t.equivalente) {
+      const linhas = todasValoracoes(f.variaveis);
+      fb.appendChild(el('p', null,
+        `Correto! ${texto} ≡ ${original}: as duas colunas coincidem nas ${linhas.length} linhas.`));
+      fb.appendChild(tabelaComparacao(f, [f.formula, op], linhas));
+    } else {
+      fb.appendChild(el('p', null,
+        `Contraexemplo: com ${textoValoracao(t.contra)}, o original dá ${bit(avaliar(f.formula, t.contra))} ` +
+        `e ${texto} dá ${bit(avaliar(op, t.contra))}. Uma única linha diferente já prova que não são equivalentes.`));
+      fb.appendChild(tabelaComparacao(f, [f.formula, op], [t.contra]));
+    }
+    extra.appendChild(fb);
   }
-  layout.appendChild(painelExpressao);
+}
 
-  const painelTabela = el('section', 'tabela-desafio');
-  painelTabela.appendChild(el('h4', null, 'Tabela-verdade em construção'));
-
-  const tabela = el('table', 'tabela');
+/* Tabela pequena: variáveis | fórmulas, só para as valorações pedidas */
+function tabelaComparacao(f, formulas, valoracoes) {
+  const t = el('table', 'tabela');
   const cab = el('tr');
   f.variaveis.forEach(v => cab.appendChild(el('th', null, v)));
-  cab.appendChild(el('th', null, formulaParaTexto(f.formula)));
-  if (comparar) cab.appendChild(el('th', null, formulaParaTexto(f.compararCom)));
-  cab.appendChild(el('th', null, comparar ? 'Coincidem?' : 'Saída'));
-  tabela.appendChild(cab);
-  linhas.forEach((linha, i) => {
-    const tr = el('tr', i === indiceAtual ? 'atual' : '');
-    f.variaveis.forEach(v => tr.appendChild(el('td', bit(linha.valoracao[v]), bit(linha.valoracao[v]))));
-    const resposta = jogo.respostas[i];
-    if (comparar) {
-      const a = resposta ? resposta.a : undefined;
-      const b = resposta ? resposta.b : undefined;
-      tr.appendChild(el('td', a === undefined ? 'pendente' : bit(a), a === undefined ? '—' : bit(a)));
-      tr.appendChild(el('td', b === undefined ? 'pendente' : bit(b), b === undefined ? '—' : bit(b)));
-      tr.appendChild(el('td', resposta ? bit(resposta.iguais) : 'pendente',
-        resposta ? bit(resposta.iguais) : '—'));
-    } else {
-      tr.appendChild(el('td', resposta === undefined ? 'pendente' : bit(resposta),
-        resposta === undefined ? '—' : bit(resposta)));
-    }
-    tabela.appendChild(tr);
+  formulas.forEach(form => cab.appendChild(el('th', null, formulaParaTexto(form))));
+  t.appendChild(cab);
+  valoracoes.forEach(val => {
+    const tr = el('tr');
+    f.variaveis.forEach(v => tr.appendChild(el('td', bit(val[v]), bit(val[v]))));
+    formulas.forEach(form => {
+      const r = avaliar(form, val);
+      tr.appendChild(el('td', bit(r), bit(r)));
+    });
+    t.appendChild(tr);
   });
-  painelTabela.appendChild(tabela);
-  painelTabela.appendChild(el('p', 'legenda-desafio', comparar
-    ? 'Uma única linha diferente já prova que as fórmulas não são equivalentes.'
-    : 'Resolva as linhas em sequência; as saídas corretas ficam registradas na tabela.'));
-  layout.appendChild(painelTabela);
-
-  const painelFios = el('section', 'painel-fios');
-  painelFios.appendChild(el('h4', null, comparar ? 'Os resultados coincidem nesta linha?' : 'Conecte a saída'));
-  painelFios.appendChild(el('p', 'linha-desafio', `Desafio ${indiceAtual + 1} de ${linhas.length}`));
-  painelFios.appendChild(el('p', 'pergunta-equivalencia',
-    comparar ? 'Escolha V se as duas expressões tiverem o mesmo valor; caso contrário, escolha F.' : 'Avalie a expressão para a linha destacada na tabela.'));
-
-  const conexao = el('div', 'conexao-fios');
-  conexao.appendChild(el('span', 'origem-fio', 'SAÍDA'));
-  conexao.appendChild(el('span', 'fio fio-desafio' + (jogo.feedback === 'erro' ? ' fio-erro' : '')));
-  const terminais = el('div', 'terminais-fios');
-  [true, false].forEach(valor => {
-    const terminal = el('button', 'terminal-fio ' + (valor ? 'terminal-v' : 'terminal-f'));
-    terminal.type = 'button';
-    terminal.textContent = comparar
-      ? (valor ? 'V · Iguais' : 'F · Diferentes')
-      : (valor ? 'V · Verdadeiro' : 'F · Falso');
-    terminal.setAttribute('aria-label', comparar
-      ? `Conectar ao terminal ${valor ? 'iguais' : 'diferentes'}`
-      : `Conectar a saída ao terminal ${valor ? 'verdadeiro' : 'falso'}`);
-    terminal.disabled = jogo.fim;
-    terminal.onclick = () => responderDesafio(valor);
-    terminais.appendChild(terminal);
-  });
-  conexao.appendChild(terminais);
-  painelFios.appendChild(conexao);
-  if (jogo.feedback) {
-    painelFios.appendChild(el('p', 'feedback-desafio' + (jogo.feedback === 'erro' ? ' erro' : ''),
-      jogo.feedback === 'erro' ? 'Conexão incorreta. Reavalie os conectivos e tente outra vez.' : 'Conexão correta!'));
-  }
-  layout.appendChild(painelFios);
-  extra.appendChild(layout);
+  return t;
 }
 
 /* ---------- Bandeja de peças (Etapa 2) ---------- */
@@ -909,8 +892,9 @@ function vencer() {
   const ultima = jogo.idx === FASES.length - 1;
   const unidade = f.etapa === 1 ? 'jogada' : f.etapa === 2 ? 'peça' : 'tentativa';
   const s = jogo.jogadas === 1 ? '' : 's';
+  const nCertas = f.etapa === 3 ? opcoesEquivalentes(f).length : 0;
   const resumoDesafio = f.etapa === 3
-    ? `Você completou <b>${gerarTabelaVerdade(f.formula, f.variaveis).length}</b> linhas em <b>${jogo.jogadas}</b> tentativas. O mínimo para esta fase é <b>${f.criterioEstrelas.tres}</b>.`
+    ? `Você encontrou ${nCertas === 1 ? 'o substituto equivalente' : `os <b>${nCertas}</b> substitutos equivalentes`} em <b>${jogo.jogadas}</b> tentativa${s}. O mínimo possível é <b>${f.criterioEstrelas.tres}</b>.`
     : `Você resolveu com <b>${jogo.jogadas}</b> ${unidade}${s}. O mínimo possível é <b>${f.criterioEstrelas.tres}</b>.`;
 
   setTimeout(() => {
@@ -931,27 +915,16 @@ function vencer() {
   }, 900);
 }
 
-function responderDesafio(resposta) {
-  if (jogo.fim) return;
+/* Etapa 3: instalar um candidato. Equivalente fica verde; senão, contraexemplo. */
+function escolherOpcao(i) {
+  if (jogo.fim || jogo.testadas[i]) return;
   const f = jogo.fase;
-  const linhas = gerarTabelaVerdade(f.formula, f.variaveis);
-  const linha = linhas[jogo.linhaDesafio];
-  const valorA = linha.resultado;
-  const valorB = f.compararCom ? avaliar(f.compararCom, linha.valoracao) : undefined;
-  const correta = f.compararCom ? valorA === valorB : valorA;
+  const contra = contraexemplo(f.formula, f.opcoes[i], f.variaveis);
+  jogo.testadas[i] = { equivalente: !contra, contra: contra };
+  jogo.ultimaOpcao = i;
   jogo.jogadas++;
-  if (resposta !== correta) {
-    jogo.feedback = 'erro';
-    renderFase();
-    return;
-  }
-
-  jogo.respostas[jogo.linhaDesafio] = f.compararCom
-    ? { a: valorA, b: valorB, iguais: resposta }
-    : resposta;
-  jogo.linhaDesafio++;
-  jogo.feedback = '';
-  if (jogo.linhaDesafio === linhas.length) vencer();
+  const faltam = opcoesEquivalentes(f).filter(k => !jogo.testadas[k]).length;
+  if (faltam === 0) vencer();
   else renderFase();
 }
 

@@ -136,35 +136,30 @@
 .extra:empty { display: none; }
 .extra { margin-top: 14px; background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; padding: 14px; overflow-x: auto; }
 .extra h4 { margin: 0 0 8px; font-size: 15px; }
-.desafio-layout { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 18px; align-items: start; }
-.expressao-desafio-painel, .tabela-desafio, .painel-fios { min-width: 0; }
-.expressao-desafio { margin: 0; padding: 14px; border: 1px solid var(--borda-forte); border-radius: 8px; background: var(--painel2); color: var(--ambar); font: 700 20px var(--mono); overflow-wrap: anywhere; }
-.painel-fios { grid-column: 1 / -1; }
-.tabela-desafio .tabela { width: auto; }
-.tabela-desafio .tabela th, .tabela-desafio .tabela td { padding: 6px 12px; }
-.tabela-desafio .tabela tr.atual td { outline: 1px solid rgba(var(--ambar-rgb), .35); }
-.tabela-desafio .tabela td.pendente { color: var(--texto2); }
-.legenda-desafio { color: var(--texto2); font-size: 13px; margin: 10px 0 0; }
-.linha-desafio { color: var(--texto2); margin: 4px 0 10px; }
-.entradas-desafio { display: flex; flex-wrap: wrap; gap: 8px; }
-.conexao-fios { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
-.origem-fio { flex: none; padding: 7px 9px; border: 1px solid var(--borda-forte); border-radius: 8px; color: var(--azul); font: 700 12px var(--mono); }
-.fio-desafio { flex: 1 1 24px; min-width: 24px; margin: 0; }
-.fio-desafio.fio-erro { background: var(--vermelho); box-shadow: 0 0 8px var(--vermelho); }
-.terminais-fios { display: flex; flex-direction: column; gap: 8px; }
-.terminal-fio { min-width: 130px; padding: 9px 12px; border: 2px solid var(--borda-forte); border-radius: 8px; background: var(--painel2); color: var(--texto); font: 700 14px var(--mono); cursor: pointer; }
-.terminal-fio:hover:not(:disabled) { transform: translateX(2px); }
-.terminal-fio:disabled { cursor: not-allowed; opacity: .6; }
-.terminal-v:hover:not(:disabled) { border-color: var(--verde); color: var(--verde); }
-.terminal-f:hover:not(:disabled) { border-color: var(--vermelho); color: var(--vermelho); }
-.feedback-desafio { margin: 12px 0 0; color: var(--verde); }
-.feedback-desafio.erro { color: var(--vermelho); }
-.expressoes-comparadas { display: grid; gap: 10px; }
-.expressoes-comparadas p { margin: 0; }
-.expressoes-comparadas .expressao-desafio { display: block; }
-.expressao-label { display: block; margin-bottom: 4px; color: var(--texto2); font: 12px var(--display); }
-.equivalencia-final { color: var(--texto2); font-size: 13px; margin: 10px 0 0; }
-.painel-fios .pergunta-equivalencia { color: var(--texto2); }
+/* ---------- Etapa 3: puzzle de equivalência ---------- */
+.legenda-desafio { color: var(--texto2); font-size: 13px; margin: 0 0 12px; }
+.opcoes-equiv { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.opcao-equiv {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left;
+  padding: 12px 14px; border: 2px solid var(--borda-forte); border-radius: 10px;
+  background: var(--painel2); color: var(--texto); cursor: pointer;
+  transition: border-color .15s, transform .15s, box-shadow .15s;
+}
+.opcao-equiv:hover:not(:disabled) { border-color: var(--azul); transform: translateY(-2px); }
+.opcao-equiv:disabled { cursor: default; }
+.opcao-letra { font: 700 12px var(--mono); color: var(--texto2); }
+.opcao-formula { font: 700 19px var(--mono); color: var(--ambar); overflow-wrap: anywhere; }
+.opcao-estado { font-size: 12px; color: var(--azul); text-transform: uppercase; letter-spacing: 1px; }
+.opcao-equiv.certa { border-color: var(--verde); box-shadow: 0 0 10px rgba(var(--verde-rgb), .28); }
+.opcao-equiv.certa .opcao-estado { color: var(--verde); }
+.opcao-equiv.errada { border-color: var(--vermelho-esc); opacity: .65; }
+.opcao-equiv.errada .opcao-estado { color: var(--vermelho); }
+.opcao-equiv.errada.ultima { opacity: 1; border-color: var(--vermelho); animation: tremer .4s; }
+.feedback-equiv { margin-top: 14px; padding: 12px 14px; border-left: 3px solid var(--verde); background: rgba(var(--verde-rgb), .06); }
+.feedback-equiv.erro { border-left-color: var(--vermelho); background: rgba(var(--vermelho-rgb), .07); }
+.feedback-equiv p { margin: 0 0 10px; }
+.feedback-equiv .tabela { width: auto; }
+.feedback-equiv .tabela th, .feedback-equiv .tabela td { padding: 6px 12px; }
 .ranking-sala { margin: 0 0 24px; padding: 16px; background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; }
 .ranking-sala h2 { margin: 0 0 4px; font-size: 20px; }
 .ranking-sala p { color: var(--texto2); margin: 0 0 12px; }
@@ -206,7 +201,6 @@
   .interruptor { margin: 0; }
   .porta-area { flex-direction: row; justify-content: center; }
   .porta { width: 80px; height: 110px; }
-  .desafio-layout { grid-template-columns: 1fr; }
   .hud-status { gap: 10px; flex-wrap: wrap; }
   .form-multiplayer button { margin-left: 0; width: 100%; }
 }

@@ -233,6 +233,19 @@ function equivalentes(f1, f2, vars) {
   return todasValoracoes(vars).every(val => avaliar(f1, val) === avaliar(f2, val));
 }
 
+/* Primeira valoração em que as duas fórmulas diferem (ou null se forem
+   equivalentes). Uma única linha diferente já prova a não equivalência. */
+function contraexemplo(f1, f2, vars) {
+  return todasValoracoes(vars).find(val => avaliar(f1, val) !== avaliar(f2, val)) || null;
+}
+
+/* Etapa 3: índices das opções equivalentes ao circuito original. */
+function opcoesEquivalentes(fase) {
+  return fase.opcoes
+    .map((op, i) => (equivalentes(fase.formula, op, fase.variaveis) ? i : -1))
+    .filter(i => i >= 0);
+}
+
 /* ---------------------------------------------------------------------
    6. Regras de vitória (usadas pelo jogo E pelo verificador)
    --------------------------------------------------------------------- */
@@ -286,6 +299,8 @@ function calcularEstrelas(fase, jogadas, usouTabela) {
        → acha o MENOR número de cliques até acender tudo.
      • Etapa 2: testa TODAS as formas de colocar as peças disponíveis
        nos encaixes → conta soluções e acha o menor número de peças.
+     • Etapa 3: compara a tabela-verdade de cada opção com a do original
+       → confere que há substitutos equivalentes e opções erradas.
    --------------------------------------------------------------------- */
 function textoValoracao(val) {
   return Object.keys(val).map(k => k + '=' + (val[k] ? 'V' : 'F')).join(' ');
@@ -373,25 +388,30 @@ function verificarEtapa2(fase) {
   };
 }
 
+/* Etapa 3: o original e as opções usam só as variáveis da fase, existe
+   pelo menos um substituto equivalente e pelo menos uma "pegadinha".   */
 function verificarEtapa3(fase) {
   const problemas = [];
-  const vars = variaveisDe(fase.formula);
-  const linhas = gerarTabelaVerdade(fase.formula, fase.variaveis);
+  const opcoes = fase.opcoes || [];
 
   if (new Set(fase.variaveis).size !== fase.variaveis.length) problemas.push('há variáveis repetidas');
-  if (vars.some(v => !fase.variaveis.includes(v))) problemas.push('a fórmula usa variável ausente da lista');
-  if (fase.compararCom) {
-    const varsComparacao = variaveisDe(fase.compararCom);
-    if (varsComparacao.some(v => !fase.variaveis.includes(v))) {
-      problemas.push('a fórmula de comparação usa variável ausente da lista');
+  [fase.formula, ...opcoes].forEach(f => {
+    if (variaveisDe(f).some(v => !fase.variaveis.includes(v))) {
+      problemas.push(`${formulaParaTexto(f)} usa variável ausente da lista`);
     }
-    const equivalencias = linhas.map(l => avaliar(fase.formula, l.valoracao) === avaliar(fase.compararCom, l.valoracao));
-    if (!equivalencias.includes(true) || !equivalencias.includes(false)) {
-      problemas.push('a comparação deve conter linhas iguais e diferentes');
+  });
+  if (opcoes.length < 2) problemas.push('a fase precisa de pelo menos duas opções');
+  const textos = opcoes.map(f => formulaParaTexto(f));
+  if (new Set(textos).size !== textos.length) problemas.push('há opções repetidas');
+  if (textos.includes(formulaParaTexto(fase.formula))) problemas.push('uma opção é idêntica ao original');
+
+  const certas = problemas.length ? [] : opcoesEquivalentes(fase);
+  if (!problemas.length) {
+    if (certas.length === 0) problemas.push('nenhuma opção é equivalente ao original');
+    if (certas.length === opcoes.length) problemas.push('todas as opções são equivalentes');
+    if (fase.criterioEstrelas.tres !== certas.length) {
+      problemas.push(`criterioEstrelas.tres deveria ser ${certas.length}`);
     }
-  }
-  if (fase.criterioEstrelas.tres !== linhas.length) {
-    problemas.push(`criterioEstrelas.tres deveria ser ${linhas.length}`);
   }
   if (fase.criterioEstrelas.dois < fase.criterioEstrelas.tres) {
     problemas.push('criterioEstrelas.dois não pode ser menor que criterioEstrelas.tres');
@@ -399,8 +419,8 @@ function verificarEtapa3(fase) {
 
   return {
     fase: fase.id, ok: problemas.length === 0,
-    minimo: linhas.length, limite: 'linhas da tabela', solucoes: linhas.length,
-    exemplo: `${linhas.filter(l => l.resultado).length} saídas V`,
+    minimo: certas.length, limite: 'escolhas', solucoes: certas.length,
+    exemplo: certas.map(i => textos[i]).join('  |  ') || '-',
     problema: problemas.join('; ') || '-',
   };
 }
@@ -430,7 +450,7 @@ if (typeof module !== 'undefined') {
   module.exports = {
     OPS, CONECTIVOS_BINARIOS, V, NAO, E, OU, IMPLICA, SSE, SLOT_BIN, SLOT_NEG, SLOT_VAR,
     avaliar, avaliarParcial, preencher, listarSlots, formulaParaTexto, variaveisDe,
-    gerarTabelaVerdade, equivalentes, lampadasDe, lampadasAcesas, configsDe,
+    gerarTabelaVerdade, equivalentes, contraexemplo, opcoesEquivalentes, lampadasDe, lampadasAcesas, configsDe,
     objetivoAtingido, pecaCabe, calcularEstrelas, verificarFases, textoValoracao,
   };
 }
