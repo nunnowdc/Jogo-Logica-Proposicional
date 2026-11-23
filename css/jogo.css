@@ -169,6 +169,8 @@
 .lista-ranking { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px 20px; margin: 14px 0 0; padding-left: 26px; }
 .lista-ranking li { padding: 4px 0; color: var(--texto); }
 .lista-ranking:empty { display: none; }
+.lista-ranking li.voce { color: var(--ambar); font-weight: 700; }
+.ranking-sala .perfil-atual { color: var(--texto); }
 
 /* ---------- Bandeja de peças ---------- */
 .bandeja:empty { display: none; }

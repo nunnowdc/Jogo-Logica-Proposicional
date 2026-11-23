@@ -54,47 +54,74 @@ const INTRO_ETAPAS = {
   },
 };
 
-/* ---------- Progresso salvo (localStorage com try/catch) ---------- */
-const CHAVE_SAVE = 'circuito-do-conectivo-v1';
-const CHAVE_RANKING = 'circuito-do-conectivo-ranking-v1';
+/* ---------- Progresso salvo (localStorage com try/catch) ----------
+   Cada nome de jogador tem o próprio perfil (estrelas + introduções
+   vistas), tudo salvo NESTE navegador. O ranking é calculado a partir
+   dos perfis, então ninguém herda as estrelas de outra pessoa.
+   Sem nome salvo, o jogador é "visitante" e não entra no ranking.    */
+const CHAVE_PERFIS = 'circuito-do-conectivo-perfis-v2';
+const CHAVE_SAVE_ANTIGO = 'circuito-do-conectivo-v1';   // formato antigo (um só progresso)
 const CHAVE_JOGADOR = 'circuito-do-conectivo-jogador-v1';
 const TEMPO_POR_FASE = 120;
+const PENALIDADE_ERRO = 15;   // segundos somados por jogada além do mínimo (partida local)
 
-function carregarProgresso() {
-  try {
-    const texto = localStorage.getItem(CHAVE_SAVE);
-    if (texto) {
-      const dados = JSON.parse(texto);
-      return { estrelas: dados.estrelas || {}, introVista: dados.introVista || {} };
-    }
-  } catch (e) { /* navegador sem acesso ao armazenamento: segue sem salvar */ }
-  return { estrelas: {}, introVista: {} };
-}
+function chavePerfil(nome) { return nome.trim().toLocaleLowerCase(); }
 
-function salvarProgresso() {
-  try { localStorage.setItem(CHAVE_SAVE, JSON.stringify(progresso)); } catch (e) { /* ignora */ }
-}
-
-function carregarRanking() {
-  try {
-    const dados = JSON.parse(localStorage.getItem(CHAVE_RANKING) || '[]');
-    return Array.isArray(dados)
-      ? dados.filter(item => item && typeof item.nome === 'string' && Number.isFinite(item.estrelas) && item.estrelas >= 0)
-      : [];
-  } catch (e) { return []; }
-}
-
-function salvarRanking() {
-  try { localStorage.setItem(CHAVE_RANKING, JSON.stringify(ranking)); } catch (e) { /* ignora */ }
+function somaEstrelas(estrelas) {
+  return Object.values(estrelas || {}).reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
 }
 
 function carregarNomeJogador() {
-  try { return localStorage.getItem(CHAVE_JOGADOR) || ''; } catch (e) { return ''; }
+  try { return (localStorage.getItem(CHAVE_JOGADOR) || '').trim().slice(0, 24); } catch (e) { return ''; }
 }
 
-let progresso = carregarProgresso();
-let ranking = carregarRanking();
+function carregarPerfis() {
+  try {
+    const dados = JSON.parse(localStorage.getItem(CHAVE_PERFIS) || 'null');
+    if (dados && typeof dados === 'object' && !Array.isArray(dados)) return dados;
+    // Primeira vez nesta versão: o progresso antigo passa para o nome salvo
+    const antigo = JSON.parse(localStorage.getItem(CHAVE_SAVE_ANTIGO) || 'null');
+    if (antigo && antigo.estrelas) {
+      const nome = carregarNomeJogador();
+      return { [chavePerfil(nome)]: { nome: nome, estrelas: antigo.estrelas, introVista: antigo.introVista || {} } };
+    }
+  } catch (e) { /* navegador sem acesso ao armazenamento: segue sem salvar */ }
+  return {};
+}
+
+function progressoDe(nome) {
+  const p = perfis[chavePerfil(nome)];
+  return {
+    estrelas: { ...((p && p.estrelas) || {}) },
+    introVista: { ...((p && p.introVista) || {}) },
+  };
+}
+
+function salvarProgresso() {
+  perfis[chavePerfil(nomeJogador)] = { nome: nomeJogador, estrelas: progresso.estrelas, introVista: progresso.introVista };
+  try { localStorage.setItem(CHAVE_PERFIS, JSON.stringify(perfis)); } catch (e) { /* ignora */ }
+}
+
+/* Troca o jogador atual: o menu passa a mostrar as fases e estrelas dele. */
+function trocarJogador(nome) {
+  nomeJogador = nome;
+  try { localStorage.setItem(CHAVE_JOGADOR, nomeJogador); } catch (e) { /* segue só nesta sessão */ }
+  progresso = progressoDe(nomeJogador);
+}
+
+/* Ranking: jogadores com nome e pelo menos 1 estrela, do maior para o menor */
+function rankingAtual() {
+  return Object.values(perfis)
+    .filter(p => p && typeof p.nome === 'string' && p.nome.trim())
+    .map(p => ({ nome: p.nome, estrelas: somaEstrelas(p.estrelas) }))
+    .filter(p => p.estrelas > 0)
+    .sort((a, b) => b.estrelas - a.estrelas || a.nome.localeCompare(b.nome))
+    .slice(0, 10);
+}
+
+let perfis = carregarPerfis();
 let nomeJogador = carregarNomeJogador();
+let progresso = progressoDe(nomeJogador);
 let partidaLocal = null;
 
 /* Estado da fase em andamento */
@@ -141,8 +168,9 @@ function atualizarStatusPartida() {
     const tempoAtual = jogador === jogadorAtivo && jogador.iniciouEm !== null
       ? Date.now() - jogador.iniciouEm
       : 0;
-    const tempo = jogador.tempoMs + tempoAtual;
-    return `${jogador.nome}: ${jogador.concluidas}/3 · ${Math.floor(tempo / 1000)} s · ${jogador.tentativas} tentativas`;
+    const tempo = (partidaLocal.desempate ? jogador.tempoDesempateMs : jogador.tempoMs) + tempoAtual;
+    const erros = partidaLocal.desempate ? jogador.errosDesempate : jogador.erros;
+    return `${jogador.nome}: ${jogador.concluidas}/3 · ${Math.floor(tempo / 1000)} s · ${erros} erro${erros === 1 ? '' : 's'}`;
   }).join(' | ');
   visor.textContent = `${partidaLocal.desempate ? 'Fase extra de desempate' : `Vez de ${jogadorAtivo.nome}`} — ${placar}`;
   visor.hidden = false;
@@ -175,34 +203,27 @@ function pararCronometro() {
   jogo.aguardandoCronometro = false;
 }
 
-function registrarPontuacao() {
-  const nome = nomeJogador.trim() || 'Jogador';
-  const estrelas = Object.values(progresso.estrelas).reduce((a, b) => a + b, 0);
-  const existente = ranking.find(item => item.nome.toLocaleLowerCase() === nome.toLocaleLowerCase());
-  if (existente) existente.estrelas = Math.max(existente.estrelas, estrelas);
-  else ranking.push({ nome: nome, estrelas: estrelas });
-  ranking.sort((a, b) => b.estrelas - a.estrelas || a.nome.localeCompare(b.nome));
-  ranking = ranking.slice(0, 10);
-  salvarRanking();
-}
-
 function renderRanking() {
-  const input = $('#nome-jogador');
-  input.value = nomeJogador;
+  $('#nome-jogador').value = nomeJogador;
+  $('#perfil-atual').innerHTML = nomeJogador
+    ? `Jogando como <b>${escaparHTML(nomeJogador)}</b>. Para trocar de jogador, salve outro nome.`
+    : 'Você está jogando como <b>visitante</b> e não aparece no ranking. Salve um nome para entrar nele.';
   const lista = $('#lista-ranking');
   lista.innerHTML = '';
-  ranking.forEach(item => {
-    lista.appendChild(el('li', null, `${item.nome} — ★ ${item.estrelas}`));
+  rankingAtual().forEach(item => {
+    const li = el('li', null, `${item.nome} — ★ ${item.estrelas}`);
+    if (chavePerfil(item.nome) === chavePerfil(nomeJogador)) li.className = 'voce';
+    lista.appendChild(li);
   });
 }
 
-function sortearTresFasesMultiplayer() {
-  const disponiveis = FASES.filter(f => f.etapa === 3 && !f.desempate);
-  for (let i = disponiveis.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [disponiveis[i], disponiveis[j]] = [disponiveis[j], disponiveis[i]];
-  }
-  return disponiveis.slice(0, 3).map(f => f.id);
+/* Partida local: UMA fase sorteada de cada etapa (1, 2 e 3), a mesma
+   lista para os dois jogadores, para a disputa ser justa. */
+function sortearFasesPartida() {
+  return [1, 2, 3].map(etapa => {
+    const opcoes = FASES.filter(f => f.etapa === etapa && !f.desempate);
+    return opcoes[Math.floor(Math.random() * opcoes.length)].id;
+  });
 }
 
 function criarEstadoFase(i) {
@@ -230,19 +251,22 @@ function criarEstadoFase(i) {
 
 function iniciarPartidaLocal(nome1, nome2) {
   const faseDesempate = FASES.find(f => f.desempate);
-  const pool = FASES.filter(f => f.etapa === 3 && !f.desempate);
-  if (pool.length < 3 || !faseDesempate) {
-    abrirModal('<h3>Partida indisponível</h3><p>São necessárias pelo menos três fases de desafio e uma fase de desempate.</p>',
+  const temTodasEtapas = [1, 2, 3].every(e => FASES.some(f => f.etapa === e && !f.desempate));
+  if (!temTodasEtapas || !faseDesempate) {
+    abrirModal('<h3>Partida indisponível</h3><p>É necessária pelo menos uma fase em cada etapa e uma fase de desempate.</p>',
       [{ texto: 'Ok', primario: true }]);
     return;
   }
 
   pararCronometro();
+  const fases = sortearFasesPartida();   // as mesmas fases para os dois
+  const novoJogador = nome => ({
+    nome: nome, fases: fases, concluidas: 0, iniciouEm: null,
+    tempoMs: 0, tentativas: 0, erros: 0,
+    tempoDesempateMs: 0, tentativasDesempate: 0, errosDesempate: 0,
+  });
   partidaLocal = {
-    jogadores: [
-      { nome: nome1, fases: sortearTresFasesMultiplayer(), concluidas: 0, tempoMs: 0, tentativas: 0, iniciouEm: null, tempoDesempateMs: 0, tentativasDesempate: 0 },
-      { nome: nome2, fases: sortearTresFasesMultiplayer(), concluidas: 0, tempoMs: 0, tentativas: 0, iniciouEm: null, tempoDesempateMs: 0, tentativasDesempate: 0 },
-    ],
+    jogadores: [novoJogador(nome1), novoJogador(nome2)],
     ativo: 0,
     proximo: 0,
     desempate: false,
@@ -270,10 +294,13 @@ function iniciarTurnoMultiplayer(indiceJogador) {
   mostrarTela('tela-jogo');
   renderFase();
   const rotulo = partidaLocal.desempate ? 'Fase extra de desempate' : `Fase ${jogador.concluidas + 1} de 3`;
+  const intro = INTRO_ETAPAS[jogo.fase.etapa];
   abrirModal(
     `<h3>Vez de ${escaparHTML(jogador.nome)}</h3>
-     <p>${rotulo}: <b>${jogo.fase.titulo}</b>.</p>
-     <p>Prepare o jogador atual e inicie quando estiver pronto. Os 120 segundos começam no botão abaixo.</p>`,
+     <p>${rotulo}: <b>${jogo.fase.titulo}</b> (${intro.titulo}).</p>
+     <p>${intro.resumo}</p>
+     <p>Cada jogada além do mínimo da fase soma <b>+${PENALIDADE_ERRO} s</b> ao seu tempo.
+        Os 120 segundos começam no botão abaixo.</p>`,
     [{ texto: 'Começar turno', primario: true, acao: iniciarCronometro }]
   );
 }
@@ -284,13 +311,27 @@ function registrarTempoDoTurno() {
   if (jogador.iniciouEm === null) return;
   const decorrido = Math.max(0, Date.now() - jogador.iniciouEm);
   jogador.iniciouEm = null;
+  // Erro = jogada além do mínimo da fase (escolha errada, clique ou peça a mais).
+  // Assim, chutar todas as opções sai mais caro do que pensar.
+  const erros = Math.max(0, jogo.jogadas - jogo.fase.criterioEstrelas.tres);
+  const total = decorrido + erros * PENALIDADE_ERRO * 1000;
   if (jogo.desempate) {
-    jogador.tempoDesempateMs += decorrido;
+    jogador.tempoDesempateMs += total;
     jogador.tentativasDesempate += jogo.jogadas;
+    jogador.errosDesempate += erros;
   } else {
-    jogador.tempoMs += decorrido;
+    jogador.tempoMs += total;
     jogador.tentativas += jogo.jogadas;
+    jogador.erros += erros;
   }
+}
+
+/* "38 s (2 erros, +30 s)": tempo total já com a penalidade */
+function resumoJogador(jogador, desempate) {
+  const erros = desempate ? jogador.errosDesempate : jogador.erros;
+  const tentativas = desempate ? jogador.tentativasDesempate : jogador.tentativas;
+  const pen = erros ? ` (${erros} erro${erros === 1 ? '' : 's'}, +${erros * PENALIDADE_ERRO} s)` : ' (sem erros)';
+  return `${escaparHTML(jogador.nome)}: ${tempoEmSegundos(jogador, desempate)} s${pen}, ${tentativas} tentativas.`;
 }
 
 function tempoEmSegundos(jogador, desempate) {
@@ -323,8 +364,8 @@ function concluirTurnoMultiplayer() {
       ? 'A partida terminou empatada: tempo e tentativas iguais na fase extra.'
       : `${escaparHTML(partida.jogadores[vencedor].nome)} venceu o desempate!`;
     abrirModal(`<h3>Fim da partida</h3><p>${mensagem}</p>
-      <p>${escaparHTML(partida.jogadores[0].nome)}: ${tempoEmSegundos(partida.jogadores[0], true)} s, ${partida.jogadores[0].tentativasDesempate} tentativas.<br>
-      ${escaparHTML(partida.jogadores[1].nome)}: ${tempoEmSegundos(partida.jogadores[1], true)} s, ${partida.jogadores[1].tentativasDesempate} tentativas.</p>`,
+      <p>${resumoJogador(partida.jogadores[0], true)}<br>
+      ${resumoJogador(partida.jogadores[1], true)}</p>`,
       [{ texto: 'Voltar ao menu', primario: true, acao: irParaMenu }]);
     return;
   }
@@ -346,9 +387,9 @@ function concluirTurnoMultiplayer() {
 
     partida.encerrada = true;
     abrirModal(`<h3>${escaparHTML(partida.jogadores[vencedor].nome)} venceu!</h3>
-      <p>Resultado pelo tempo total das três fases. Em caso de tempo igual, venceu quem precisou de menos tentativas.</p>
-      <p>${escaparHTML(partida.jogadores[0].nome)}: ${tempoEmSegundos(partida.jogadores[0], false)} s, ${partida.jogadores[0].tentativas} tentativas.<br>
-      ${escaparHTML(partida.jogadores[1].nome)}: ${tempoEmSegundos(partida.jogadores[1], false)} s, ${partida.jogadores[1].tentativas} tentativas.</p>`,
+      <p>Resultado pelo tempo total das três fases, com +${PENALIDADE_ERRO} s por erro. Em caso de tempo igual, vence quem precisou de menos tentativas.</p>
+      <p>${resumoJogador(partida.jogadores[0], false)}<br>
+      ${resumoJogador(partida.jogadores[1], false)}</p>`,
       [{ texto: 'Voltar ao menu', primario: true, acao: irParaMenu }]);
     return;
   }
@@ -357,7 +398,7 @@ function concluirTurnoMultiplayer() {
   partida.proximo = partida.jogadores[proximo].concluidas < 3 ? proximo : partida.ativo;
   abrirModal(`<h3>Fase concluída</h3>
     <p>${escaparHTML(jogador.nome)} completou ${escaparHTML(jogo.fase.titulo)}.</p>
-    <p>Tempo acumulado: ${tempoEmSegundos(jogador, false)} s · Tentativas: ${jogador.tentativas}</p>
+    <p>Placar até agora: ${resumoJogador(jogador, false)}</p>
     <p>Prepare o próximo jogador.</p>`,
     [{ texto: `Passar para ${partida.jogadores[partida.proximo].nome}`, primario: true, acao: () => iniciarTurnoMultiplayer(partida.proximo) }]);
 }
@@ -886,7 +927,6 @@ function vencer() {
   const est = calcularEstrelas(f, jogo.jogadas, jogo.usouTabela);
   progresso.estrelas[f.id] = Math.max(progresso.estrelas[f.id] || 0, est);
   salvarProgresso();
-  registrarPontuacao();
   renderFase();
 
   const ultima = jogo.idx === FASES.length - 1;
@@ -933,12 +973,23 @@ function perder(motivo) {
   jogo.fim = true;
   pararCronometro();
   renderFase();
-  if (partidaLocal && jogo.partidaLocal && motivo === 'tempo') {
+  if (motivo !== 'tempo') {
+    const sala = $('.sala');
+    sala.classList.remove('curto');
+    void sala.offsetWidth;
+    sala.classList.add('curto');
+  }
+  // Partida local: qualquer derrota (tempo ou curto-circuito na Etapa 1)
+  // soma tempo e erros ao placar e o MESMO jogador tenta a fase de novo.
+  if (partidaLocal && jogo.partidaLocal) {
     registrarTempoDoTurno();
-    const nome = partidaLocal.jogadores[partidaLocal.ativo].nome;
-    abrirModal(`<h3>Tempo esgotado!</h3>
-      <p>${escaparHTML(nome)} não concluiu esta fase a tempo. O tempo e as tentativas já realizadas foram somados ao placar.</p>
-      <p>É possível tentar a mesma fase novamente; o turno continua com ${escaparHTML(nome)}.</p>`,
+    const nome = escaparHTML(partidaLocal.jogadores[partidaLocal.ativo].nome);
+    const motivoTexto = motivo === 'tempo'
+      ? `${nome} não concluiu esta fase a tempo.`
+      : `As ${jogo.fase.maxJogadas} jogadas acabaram e a lâmpada de ${nome} continua apagada.`;
+    abrirModal(`<h3>${motivo === 'tempo' ? 'Tempo esgotado!' : 'Curto-circuito!'}</h3>
+      <p>${motivoTexto} O tempo e os erros desta tentativa foram somados ao placar.</p>
+      <p>É possível tentar a mesma fase novamente; o turno continua com ${nome}.</p>`,
       [
         { texto: 'Desistir', acao: irParaMenu },
         { texto: 'Tentar de novo', primario: true, acao: () => iniciarTurnoMultiplayer(partidaLocal.ativo) },
@@ -946,12 +997,6 @@ function perder(motivo) {
       'derrota'
     );
     return;
-  }
-  if (motivo !== 'tempo') {
-    const sala = $('.sala');
-    sala.classList.remove('curto');
-    void sala.offsetWidth;
-    sala.classList.add('curto');
   }
   const textoDerrota = motivo === 'tempo'
     ? 'O tempo desta fase terminou. Recomece para tentar novamente.'
@@ -1117,12 +1162,13 @@ function iniciar() {
     e.preventDefault();
     const nome = $('#nome-jogador').value.trim().slice(0, 24);
     if (!nome) { $('#nome-jogador').focus(); return; }
-    nomeJogador = nome;
-    try { localStorage.setItem(CHAVE_JOGADOR, nomeJogador); } catch (e) { /* o ranking ainda funciona na sessão */ }
-    renderRanking();
+    trocarJogador(nome);
+    renderMenu();
   });
   $('#btn-reset').onclick = () => abrirModal(
-    '<h3>Apagar progresso?</h3><p>Todas as estrelas e fases desbloqueadas serão perdidas.</p>',
+    `<h3>Apagar progresso?</h3><p>Todas as estrelas e fases desbloqueadas de
+     <b>${nomeJogador ? escaparHTML(nomeJogador) : 'visitante'}</b> serão perdidas.
+     O progresso dos outros jogadores não muda.</p>`,
     [
       { texto: 'Cancelar' },
       { texto: 'Apagar', primario: true, acao: () => {

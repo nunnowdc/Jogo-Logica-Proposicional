@@ -42,10 +42,15 @@ Um circuito queimou e precisa ser trocado. O jogador recebe o **circuito origina
 - Leis trabalhadas: dupla negação, comutatividade, De Morgan (∧ e ∨), condicional como `¬P ∨ Q` e contrapositiva (e por que a recíproca e a inversa **não** servem), bicondicional sem `↔` e distributividade.
 
 ### Multiplayer local
-No menu, informe os nomes de dois jogadores para iniciar uma partida no mesmo dispositivo. Cada participante recebe três fases sorteadas; os turnos alternam após cada fase concluída. Cada jogador tem 120 segundos por tentativa, e apenas o tempo do turno ativo soma ao total. Vence o menor tempo total; em empate, contam menos tentativas e, persistindo a igualdade, ambos resolvem a fase extra de desempate.
+No menu, informe os nomes de dois jogadores para iniciar uma partida no mesmo dispositivo. Os dois recebem as **mesmas três fases** sorteadas, uma de cada etapa, e os turnos alternam após cada fase concluída. Cada jogador tem 120 segundos por tentativa, e apenas o tempo do turno ativo soma ao total.
+
+- Cada jogada além do mínimo da fase (escolha errada, clique ou peça a mais) soma **+15 s** ao tempo, para que chutar não compense.
+- Vence o menor tempo total; em empate, contam menos tentativas e, persistindo a igualdade, ambos resolvem a fase extra de desempate.
 
 ### Tempo e ranking
-Cada fase tem limite de **120 segundos**. Ao zerar, a tentativa termina e é possível recomeçar. O ranking da sala é local ao navegador: registre um nome e acumule estrelas ao concluir fases. Para compartilhar o ranking entre dispositivos seria necessário um servidor, que este projeto não possui.
+Cada fase tem limite de **120 segundos**. Ao zerar, a tentativa termina e é possível recomeçar.
+
+Cada nome salvo no menu tem o **próprio progresso** (fases liberadas e estrelas), e o ranking da sala soma as estrelas de cada um. Sem nome, você joga como visitante e não entra no ranking. Tudo fica salvo no navegador daquele computador: para compartilhar o ranking entre dispositivos seria necessário um servidor, que este projeto não possui.
 
 ### Pontuação
 Menos jogadas, menos peças ou menos tentativas rendem mais estrelas (até ★★★ por fase). Consultar a tabela-verdade custa uma estrela.

@@ -29,7 +29,8 @@
     <section class="ranking-sala" aria-labelledby="ranking-titulo">
       <div>
         <h2 id="ranking-titulo">Ranking da sala</h2>
-        <p>Ranking local neste navegador, ordenado pelas estrelas acumuladas.</p>
+        <p>Cada nome tem o próprio progresso, salvo neste navegador. O ranking soma as estrelas de cada jogador.</p>
+        <p id="perfil-atual" class="perfil-atual"></p>
       </div>
       <form id="form-jogador" class="form-jogador">
         <label for="nome-jogador">Nome do jogador</label>
@@ -41,7 +42,7 @@
     <section class="multiplayer-setup" aria-labelledby="multiplayer-titulo">
       <div>
         <h2 id="multiplayer-titulo">Partida local · 2 jogadores</h2>
-        <p>Sorteie 3 fases para cada jogador. Revezem após cada fase; vence o menor tempo total. Se empatar, valem as tentativas e depois uma fase extra.</p>
+        <p>Os dois jogadores recebem as mesmas 3 fases sorteadas, uma de cada etapa. Revezem após cada fase; vence o menor tempo total, com +15 s por erro. Se empatar, valem as tentativas e depois uma fase extra.</p>
       </div>
       <form id="form-multiplayer" class="form-multiplayer">
         <label for="multiplayer-jogador1">Jogador 1</label>
