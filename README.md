@@ -34,19 +34,17 @@ Os interruptores ficam travados e o jogador **monta o circuito**, arrastando con
 - Desafios avançados: fazer o mesmo circuito funcionar em duas salas com valores diferentes, e construir um circuito **equivalente** a `P → Q` usando só `∨` e `¬`, válido em todas as linhas da tabela-verdade.
 
 ### Etapa 3 · Circuito gêmeo (equivalência lógica)
-Junta as mecânicas das duas primeiras etapas. A tela mostra um **circuito original**, já montado, e um **circuito gêmeo** com encaixes vazios e formato diferente.
+A tela mostra uma **expressão proposta**, fixa e só para leitura, e um **circuito gêmeo** com encaixes vazios e formato diferente. O jogador monta o gêmeo com as peças da bandeja, como na Etapa 2, até ele ficar **equivalente** à expressão, isto é, com a mesma tabela-verdade.
 
-- **Montar (como na Etapa 2):** o jogador encaixa peças da bandeja no gêmeo.
-- **Testar (como na Etapa 1):** os interruptores ficam livres e não contam jogada. O jogador compara as duas lâmpadas lado a lado.
-- **Luzes de sincronia:** há uma luz por combinação dos interruptores. Ela fica verde quando as lâmpadas concordam e vermelha quando discordam, e a vermelha mostra um **contraexemplo**. Tocar numa luz leva os interruptores para aquela combinação.
-- **Objetivo:** a porta abre quando todas as luzes ficam verdes, ou seja, quando o gêmeo é **equivalente** ao original (mesma tabela-verdade).
-- **Leis:** o formato do gêmeo obriga o jogador a usá-las.
+- Quando o gêmeo é equivalente, a lâmpada dele acende e a porta abre.
+- Se o gêmeo está completo mas não é equivalente, um aviso curto pede para trocar alguma peça. A tabela-verdade continua disponível como ajuda, ao custo de uma estrela.
+- O formato do gêmeo obriga o uso das leis:
   - De Morgan: ¬(P ∧ Q) vira ¬P ∨ ¬Q.
-  - Contrapositiva: P → Q vira ¬Q → ¬P.
+  - Contrapositiva: P → Q vira ¬Q → ¬P. A inversa ¬P → ¬Q não serve.
   - Negação da condicional: ¬(P → Q) vira P ∧ ¬Q.
   - Bicondicional: P ↔ Q vira (P → Q) ∧ (Q → P).
   - Distributividade e dupla negação também aparecem.
-- **Pontuação:** menos peças rendem mais estrelas.
+- Menos peças rendem mais estrelas.
 
 ### Multiplayer local
 No menu, informe os nomes de dois jogadores para iniciar uma partida no mesmo dispositivo. Os dois recebem as **mesmas três fases** sorteadas, uma de cada etapa, e os turnos alternam após cada fase concluída. Cada jogador tem 120 segundos por tentativa, e apenas o tempo do turno ativo soma ao total.
@@ -75,9 +73,9 @@ Menos jogadas, menos peças ou menos tentativas rendem mais estrelas (até ★�
 | Valoração / satisfatibilidade | Encontrar valores que tornam a fórmula V |
 | Satisfação simultânea | Várias lâmpadas ou várias salas ao mesmo tempo |
 | Equivalência lógica | Etapa 3 inteira (circuito gêmeo) e a fase "Peça de reposição" (`P → Q` com `∨` e `¬`) |
-| Contraexemplo | Luz vermelha de sincronia na Etapa 3: a combinação em que gêmeo e original discordam |
+| Contraexemplo | Tabela-verdade da Etapa 3 mostra a linha em que o gêmeo e a expressão discordam |
 | Leis de equivalência | Etapa 3: De Morgan, dupla negação, contrapositiva, negação da condicional, bicondicional, distributividade |
-| Tabela-verdade | Consulta dentro do jogo (com custo) e luzes de sincronia da Etapa 3 |
+| Tabela-verdade | Consulta dentro do jogo (com custo) e critério de equivalência da Etapa 3 |
 
 ## Estrutura
 

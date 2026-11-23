@@ -207,7 +207,7 @@ const FASES = [
   {
     id: '3-1', etapa: 3,
     titulo: 'Negação em dobro',
-    dica: 'Dois inversores seguidos se anulam. O gêmeo não tem inversores: o que sobra do original?',
+    dica: 'Dois inversores seguidos se anulam. O gêmeo não tem inversores: o que sobra da expressão?',
     alvoEquivalente: NAO(NAO(E(P, Q))),
     formula: SLOT_BIN('a', SLOT_VAR('x'), SLOT_VAR('y')),
     variaveis: ['P', 'Q'],
@@ -229,7 +229,7 @@ const FASES = [
   {
     id: '3-3', etapa: 3,
     titulo: 'De Morgan ao contrário',
-    dica: '¬(P ∨ Q) só acende quando P e Q estão desligados. Como dizer isso com negações nas pontas?',
+    dica: '¬(P ∨ Q) só é V quando P e Q são F. Como dizer isso com negações nas pontas?',
     alvoEquivalente: NAO(OU(P, Q)),
     formula: SLOT_BIN('a', SLOT_NEG('n1', SLOT_VAR('x')), SLOT_NEG('n2', SLOT_VAR('y'))),
     variaveis: ['P', 'Q'],
@@ -251,7 +251,7 @@ const FASES = [
   {
     id: '3-5', etapa: 3,
     titulo: 'Promessa descumprida',
-    dica: 'P → Q só é F quando P é V e Q é F. Então ¬(P → Q) acende exatamente nesse caso.',
+    dica: 'P → Q só é F quando P é V e Q é F. Então ¬(P → Q) é V exatamente nesse caso.',
     alvoEquivalente: NAO(IMPLICA(P, Q)),
     formula: SLOT_BIN('a', SLOT_VAR('x'), NAO(SLOT_VAR('y'))),
     variaveis: ['P', 'Q'],
