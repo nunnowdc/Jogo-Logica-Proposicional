@@ -59,6 +59,27 @@
 .final-lampadas span:nth-child(5) { animation-delay: .8s; }
 @keyframes piscar { 50% { opacity: .55; } }
 
+/* ---------- Resultado da partida local ---------- */
+.resultado { padding-top: 36px; }
+.resultado-rotulo { margin: 22px auto 0 !important; font-family: var(--mono); color: var(--texto2); text-transform: uppercase; letter-spacing: 2px; font-size: 13px; }
+.resultado h1 { margin-top: 6px; overflow-wrap: anywhere; }
+#resultado-motivo { color: var(--texto); font-size: 17px; }
+#tela-resultado.empate .final-lampadas span { animation-duration: .8s; }
+.resultado-placar { max-width: 720px; margin: 22px auto 14px; overflow-x: auto; }
+.placar { width: 100%; text-align: left; }
+.placar th, .placar td { padding: 10px 12px; vertical-align: top; white-space: normal; }
+.placar th.vencedor { color: var(--ambar); }
+.placar td b { display: block; font-family: var(--mono); font-size: 17px; color: var(--texto); }
+.placar td small { color: var(--texto2); font-size: 12px; }
+.placar td.melhor b { color: var(--verde); }
+.placar .placar-fase { color: var(--texto2); }
+.placar tr.total td { border-top: 2px solid var(--borda-forte); }
+.placar tr.total .placar-fase { color: var(--texto); font-weight: 700; }
+.placar tr.extra .placar-fase { color: var(--ambar); }
+.resultado-regra { font-size: 13px; }
+.resultado-botoes { display: flex; gap: 10px; justify-content: center; margin-top: 18px; }
+
+
 /* ---------- Telas pequenas ---------- */
 @media (max-width: 820px) {
   .menu-topo h1 { font-size: 30px; }

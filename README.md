@@ -46,6 +46,7 @@ No menu, informe os nomes de dois jogadores para iniciar uma partida no mesmo di
 
 - Cada jogada além do mínimo da fase (escolha errada, clique ou peça a mais) soma **+15 s** ao tempo, para que chutar não compense.
 - Vence o menor tempo total; em empate, contam menos tentativas e, persistindo a igualdade, ambos resolvem a fase extra de desempate.
+- No fim, a **tela de resultado** mostra o vencedor, o motivo da vitória e o placar fase a fase (tempo, erros e penalidade de cada jogador). O botão **Revanche** começa outra partida com os mesmos nomes e um novo sorteio.
 
 ### Tempo e ranking
 Cada fase tem limite de **120 segundos**. Ao zerar, a tentativa termina e é possível recomeçar.
@@ -74,7 +75,7 @@ Menos jogadas, menos peças ou menos tentativas rendem mais estrelas (até ★�
 ## Estrutura
 
 ```
-index.html        telas do jogo (menu, fase, final)
+index.html        telas do jogo (menu, fase, final, resultado da partida)
 css/
   tema.css        cores e fontes (todas as variáveis do visual)
   base.css        estrutura geral, botões, tabelas e janelas

@@ -262,6 +262,7 @@ function iniciarPartidaLocal(nome1, nome2) {
   const fases = sortearFasesPartida();   // as mesmas fases para os dois
   const novoJogador = nome => ({
     nome: nome, fases: fases, concluidas: 0, iniciouEm: null,
+    historico: [],   // uma entrada por fase jogada, para a tela de resultado
     tempoMs: 0, tentativas: 0, erros: 0,
     tempoDesempateMs: 0, tentativasDesempate: 0, errosDesempate: 0,
   });
@@ -305,7 +306,9 @@ function iniciarTurnoMultiplayer(indiceJogador) {
   );
 }
 
-function registrarTempoDoTurno() {
+/* concluiu = true quando a fase foi resolvida; false quando a tentativa
+   terminou em derrota (tempo ou curto-circuito) e será repetida.        */
+function registrarTempoDoTurno(concluiu) {
   if (!partidaLocal || !jogo || !jogo.partidaLocal) return;
   const jogador = partidaLocal.jogadores[partidaLocal.ativo];
   if (jogador.iniciouEm === null) return;
@@ -315,6 +318,19 @@ function registrarTempoDoTurno() {
   // Assim, chutar todas as opções sai mais caro do que pensar.
   const erros = Math.max(0, jogo.jogadas - jogo.fase.criterioEstrelas.tres);
   const total = decorrido + erros * PENALIDADE_ERRO * 1000;
+
+  // Histórico por fase (várias tentativas da mesma fase somam na mesma linha)
+  let linha = jogador.historico.find(h => h.id === jogo.fase.id && h.desempate === !!jogo.desempate);
+  if (!linha) {
+    linha = { id: jogo.fase.id, desempate: !!jogo.desempate, ms: 0, erros: 0, tentativas: 0, perdidas: 0, concluiu: false };
+    jogador.historico.push(linha);
+  }
+  linha.ms += total;
+  linha.erros += erros;
+  linha.tentativas += jogo.jogadas;
+  if (concluiu) linha.concluiu = true;
+  else linha.perdidas++;
+
   if (jogo.desempate) {
     jogador.tempoDesempateMs += total;
     jogador.tentativasDesempate += jogo.jogadas;
@@ -331,11 +347,19 @@ function resumoJogador(jogador, desempate) {
   const erros = desempate ? jogador.errosDesempate : jogador.erros;
   const tentativas = desempate ? jogador.tentativasDesempate : jogador.tentativas;
   const pen = erros ? ` (${erros} erro${erros === 1 ? '' : 's'}, +${erros * PENALIDADE_ERRO} s)` : ' (sem erros)';
-  return `${escaparHTML(jogador.nome)}: ${tempoEmSegundos(jogador, desempate)} s${pen}, ${tentativas} tentativas.`;
+  return `${escaparHTML(jogador.nome)}: ${formatarSegundos(tempoEmSegundos(jogador, desempate))}${pen}, ${tentativas} tentativas.`;
+}
+
+/* Tempos da partida em DÉCIMOS de segundo (12,4 s): a soma das fases
+   bate com o total mostrado e empates "artificiais" ficam raros.      */
+function msParaSegundos(ms) { return Math.round(ms / 100) / 10; }
+
+function formatarSegundos(s) {
+  return s.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' s';
 }
 
 function tempoEmSegundos(jogador, desempate) {
-  return Math.floor((desempate ? jogador.tempoDesempateMs : jogador.tempoMs) / 1000);
+  return msParaSegundos(desempate ? jogador.tempoDesempateMs : jogador.tempoMs);
 }
 
 function compararCompetidores(tempo) {
@@ -351,7 +375,7 @@ function compararCompetidores(tempo) {
 function concluirTurnoMultiplayer() {
   const partida = partidaLocal;
   const jogador = partida.jogadores[partida.ativo];
-  registrarTempoDoTurno();
+  registrarTempoDoTurno(true);
 
   if (jogo.desempate) {
     if (partida.ativo === 0) {
@@ -359,14 +383,8 @@ function concluirTurnoMultiplayer() {
       return;
     }
     partida.encerrada = true;
-    const vencedor = compararCompetidores(tempoEmSegundos, null);
-    const mensagem = vencedor < 0
-      ? 'A partida terminou empatada: tempo e tentativas iguais na fase extra.'
-      : `${escaparHTML(partida.jogadores[vencedor].nome)} venceu o desempate!`;
-    abrirModal(`<h3>Fim da partida</h3><p>${mensagem}</p>
-      <p>${resumoJogador(partida.jogadores[0], true)}<br>
-      ${resumoJogador(partida.jogadores[1], true)}</p>`,
-      [{ texto: 'Voltar ao menu', primario: true, acao: irParaMenu }]);
+    const vencedorDesempate = compararCompetidores(tempoEmSegundos, null);
+    setTimeout(() => mostrarResultadoPartida(vencedorDesempate), 900);
     return;
   }
 
@@ -386,11 +404,8 @@ function concluirTurnoMultiplayer() {
     }
 
     partida.encerrada = true;
-    abrirModal(`<h3>${escaparHTML(partida.jogadores[vencedor].nome)} venceu!</h3>
-      <p>Resultado pelo tempo total das três fases, com +${PENALIDADE_ERRO} s por erro. Em caso de tempo igual, vence quem precisou de menos tentativas.</p>
-      <p>${resumoJogador(partida.jogadores[0], false)}<br>
-      ${resumoJogador(partida.jogadores[1], false)}</p>`,
-      [{ texto: 'Voltar ao menu', primario: true, acao: irParaMenu }]);
+    // Pequena pausa para a porta abrir antes de trocar de tela
+    setTimeout(() => mostrarResultadoPartida(vencedor), 900);
     return;
   }
 
@@ -401,6 +416,105 @@ function concluirTurnoMultiplayer() {
     <p>Placar até agora: ${resumoJogador(jogador, false)}</p>
     <p>Prepare o próximo jogador.</p>`,
     [{ texto: `Passar para ${partida.jogadores[partida.proximo].nome}`, primario: true, acao: () => iniciarTurnoMultiplayer(partida.proximo) }]);
+}
+
+/* =====================================================================
+   TELA DE RESULTADO DA PARTIDA LOCAL
+   vencedor: 0 ou 1 (índice do jogador) ou -1 (empate até no desempate)
+   ===================================================================== */
+function mostrarResultadoPartida(vencedor) {
+  const partida = partidaLocal;
+  if (!partida) return;
+  const [a, b] = partida.jogadores;
+  pararCronometro();
+  fecharModal(true);
+
+  $('#tela-resultado').classList.toggle('empate', vencedor < 0);
+  $('#resultado-titulo').textContent = vencedor < 0 ? 'Empate!' : `${partida.jogadores[vencedor].nome} venceu!`;
+  $('#resultado-motivo').textContent = motivoResultado(partida, vencedor);
+
+  const caixa = $('#resultado-placar');
+  caixa.innerHTML = '';
+  caixa.appendChild(tabelaPlacar(partida, vencedor));
+
+  $('#btn-revanche').onclick = () => iniciarPartidaLocal(a.nome, b.nome);
+  $('#btn-resultado-menu').onclick = irParaMenu;
+  $('#match-status').hidden = true;
+  mostrarTela('tela-resultado');
+}
+
+/* Explica em uma frase POR QUE o vencedor venceu */
+function motivoResultado(partida, vencedor) {
+  const d = partida.desempate;
+  if (vencedor < 0) return 'Tempo e tentativas ficaram iguais nas três fases e também na fase extra.';
+  const v = partida.jogadores[vencedor];
+  const p = partida.jogadores[1 - vencedor];
+  const tv = tempoEmSegundos(v, d), tp = tempoEmSegundos(p, d);
+  const inicio = d ? 'As três fases terminaram empatadas. Na fase extra, ' : '';
+  if (tv !== tp) {
+    return inicio + `${v.nome} fez ${formatarSegundos(tv)} contra ${formatarSegundos(tp)} de ${p.nome}` +
+      (d ? '.' : ' no tempo total, já com as penalidades.');
+  }
+  const nv = d ? v.tentativasDesempate : v.tentativas;
+  const np = d ? p.tentativasDesempate : p.tentativas;
+  return inicio + `O tempo empatou em ${formatarSegundos(tv)}; ${v.nome} venceu por fazer menos tentativas (${nv} contra ${np}).`;
+}
+
+/* Célula do placar: tempo da fase + erros/derrotas */
+function celulaPlacar(linha) {
+  const td = el('td');
+  if (!linha) { td.textContent = '—'; return td; }
+  td.appendChild(el('b', null, formatarSegundos(msParaSegundos(linha.ms))));
+  const detalhes = [linha.erros ? `${linha.erros} erro${linha.erros === 1 ? '' : 's'} (+${linha.erros * PENALIDADE_ERRO} s)` : 'sem erros'];
+  if (linha.perdidas) detalhes.push(`${linha.perdidas} tentativa${linha.perdidas === 1 ? '' : 's'} perdida${linha.perdidas === 1 ? '' : 's'}`);
+  td.appendChild(el('small', null, detalhes.join(' · ')));
+  return td;
+}
+
+/* Tabela: uma linha por fase, o total e (se houve) a fase extra.
+   Em cada linha, o menor tempo fica destacado.                       */
+function tabelaPlacar(partida, vencedor) {
+  const [a, b] = partida.jogadores;
+  const t = el('table', 'tabela placar');
+  const cab = el('tr');
+  cab.appendChild(el('th', null, 'Fase'));
+  [a, b].forEach((j, i) => cab.appendChild(el('th', i === vencedor ? 'vencedor' : null, (i === vencedor ? '★ ' : '') + j.nome)));
+  t.appendChild(cab);
+
+  function linhaTabela(rotulo, celulas, valores, classe) {
+    const tr = el('tr', classe || null);
+    tr.appendChild(el('td', 'placar-fase', rotulo));
+    celulas.forEach((td, i) => {
+      if (valores[0] !== valores[1] && valores[i] === Math.min(...valores)) td.classList.add('melhor');
+      tr.appendChild(td);
+    });
+    t.appendChild(tr);
+  }
+  const busca = (j, id, desempate) => j.historico.find(h => h.id === id && h.desempate === desempate);
+  const nomeFase = id => { const f = FASES.find(x => x.id === id); return `${id} · ${f.titulo}`; };
+
+  a.fases.forEach(id => {
+    const la = busca(a, id, false), lb = busca(b, id, false);
+    linhaTabela(nomeFase(id), [celulaPlacar(la), celulaPlacar(lb)],
+      [la ? la.ms : Infinity, lb ? lb.ms : Infinity]);
+  });
+
+  const totalCelula = j => {
+    const td = el('td');
+    td.appendChild(el('b', null, formatarSegundos(tempoEmSegundos(j, false))));
+    td.appendChild(el('small', null, `${j.erros} erro${j.erros === 1 ? '' : 's'} · ${j.tentativas} tentativas`));
+    return td;
+  };
+  linhaTabela('Total', [totalCelula(a), totalCelula(b)],
+    [tempoEmSegundos(a, false), tempoEmSegundos(b, false)], 'total');
+
+  if (partida.desempate) {
+    const id = partida.idFaseDesempate;
+    const la = busca(a, id, true), lb = busca(b, id, true);
+    linhaTabela('Fase extra: ' + nomeFase(id), [celulaPlacar(la), celulaPlacar(lb)],
+      [tempoEmSegundos(a, true), tempoEmSegundos(b, true)], 'extra');
+  }
+  return t;
 }
 
 /* =====================================================================
@@ -982,7 +1096,7 @@ function perder(motivo) {
   // Partida local: qualquer derrota (tempo ou curto-circuito na Etapa 1)
   // soma tempo e erros ao placar e o MESMO jogador tenta a fase de novo.
   if (partidaLocal && jogo.partidaLocal) {
-    registrarTempoDoTurno();
+    registrarTempoDoTurno(false);
     const nome = escaparHTML(partidaLocal.jogadores[partidaLocal.ativo].nome);
     const motivoTexto = motivo === 'tempo'
       ? `${nome} não concluiu esta fase a tempo.`
